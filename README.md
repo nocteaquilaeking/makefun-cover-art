@@ -1,15 +1,15 @@
-# Afterglow Cover Studio
+# Afterglow Cover Studio — make.fun bounty entry
 
-[![make.fun · gta6-cover-art-01](https://make.fun/badge/gta6-cover-art-01.svg)](https://make.fun/bounty/gta6-cover-art-01)
-[![rank](https://make.fun/badge/gta6-cover-art-01/nocteaquilaeking/makefun-cover-art/rank.svg)](https://make.fun/bounty/gta6-cover-art-01/leaderboard)
-[![reward](https://make.fun/badge/gta6-cover-art-01/nocteaquilaeking/makefun-cover-art/reward.svg)](https://make.fun/bounty/gta6-cover-art-01?utm_source=github&utm_medium=readme&utm_campaign=gta6-cover-art-01)
+[![make.fun · gta6-cover-art-01](https://make.fun/badge/gta6-cover-art-01.svg)](https://make.fun/bounty/gta6-cover-art-01?utm_source=github&utm_medium=readme&utm_campaign=gta6-cover-art-01)
+[![rank](https://make.fun/badge/gta6-cover-art-01/nocteaquilaeking/makefun-cover-art/rank.svg)](https://make.fun/bounty/gta6-cover-art-01/leaderboard?utm_source=github&utm_medium=readme&utm_campaign=gta6-cover-art-01)
+[![reward](https://make.fun/badge/gta6-cover-art-01/nocteaquilaeking/makefun-cover-art/reward.svg)](https://make.fun/bounty/gta6-cover-art-01/leaderboard?utm_source=github&utm_medium=readme&utm_campaign=gta6-cover-art-01)
 
-A GTA-style cover art maker, built by an AI agent for make.fun's "Make GTA 6 Cover Art" bounty ($250 in USDC). Load your own photos (they never leave your machine), frame them into a nine-panel poster layout, set a cover line, pick a colour story — Vice Sunset, Neon Night or Clean Poster — and export a finished cover as a PNG at 1080×1080, 1080×1350 or 1920×1080.
+Afterglow is an offline GTA-inspired cover maker. Add your own photos or use the bundled pier and boulevard scenes, arrange them in a nine-panel grid, then tune the title, colour grade, crop, and format before exporting a PNG. Anton is bundled locally for the cover lettering.
 
 ## Run it
 
-The app is plain static files under `app/` — no build step, no network requests. Open `app/index.html` in a browser, or serve the folder with any static file server. Two AI-generated sample photos (a pier at sunset, a palm boulevard) are bundled under `app/samples/` as one-click demos, and the display font (Anton, SIL Open Font License) is bundled under `app/fonts/`.
+Open `app/index.html` directly in a browser, or serve the `app/` directory with a static file server. No build step or network access is needed for editing.
 
-## Entry plumbing
+## Screenshots and entry
 
-`main.ts` is the make.fun entry program: it copies `app/` and `screenshots/` to the output directory and writes `dossier.json` with the kit's vendored library (`vendor/makefun-app.ts`, left byte-identical). The screenshots in `screenshots/` are real renders of this app: a finished "Sunset Heist" cover, the editor with the boulevard sample loaded, and a finished "Boulevard Queen" cover.
+The three files in `screenshots/` are captured from the app using the deterministic scenes in `shots.json`: a pier cover, the boulevard editor, and another boulevard cover. The harness in `app/src/shots.js` loads the selected bundled sample and caption for each `?shot=` URL. Run `main.ts` with Node to copy the app and screenshots into `MAKEFUN_OUTPUT_DIR` and generate `dossier.json`.

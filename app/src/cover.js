@@ -1,96 +1,53 @@
-/* Canvas renderer for the original Afterglow panel cover. */
-(function () {
+/* Nine-window poster painter and PNG dimensions. */
+(() => {
   'use strict';
-  const COLS = 3, ROWS = 3, GUTTER = 9;
-  const layouts = {
-    square: { w: 1080, h: 1080 },
-    portrait: { w: 1080, h: 1350 },
-    landscape: { w: 1920, h: 1080 }
+  const layouts = { square: [1080, 1080], portrait: [1080, 1350], landscape: [1920, 1080] };
+  const moods = {
+    vice: { filter: 'saturate(1.13) contrast(1.06) sepia(.13)', sky: 'rgba(255,184,82,.13)', dusk: 'rgba(191,38,99,.28)', shade: .14 },
+    neon: { filter: 'saturate(1.5) contrast(1.14) hue-rotate(-8deg)', sky: 'rgba(0,225,233,.19)', dusk: 'rgba(151,22,205,.37)', shade: .2 },
+    clean: { filter: 'saturate(.92) contrast(1.02) brightness(1.03)', sky: 'rgba(255,249,225,.04)', dusk: 'rgba(27,28,42,.13)', shade: .12 }
   };
-  const grades = {
-    vice: { filter: 'saturate(1.13) contrast(1.06) sepia(.13)', top: 'rgba(255,184,82,.13)', bottom: 'rgba(191,38,99,.28)', shade: .14 },
-    neon: { filter: 'saturate(1.5) contrast(1.14) hue-rotate(-8deg)', top: 'rgba(0,225,233,.19)', bottom: 'rgba(151,22,205,.37)', shade: .2 },
-    clean: { filter: 'saturate(.92) contrast(1.02) brightness(1.03)', top: 'rgba(255,249,225,.04)', bottom: 'rgba(27,28,42,.13)', shade: .12 }
-  };
-  function rectangles(width, height) {
-    const gap = GUTTER * Math.min(width / 1080, height / 1080);
-    const cw = (width - gap * (COLS + 1)) / COLS;
-    const ch = (height - gap * (ROWS + 1)) / ROWS;
-    return Array.from({ length: 9 }, (_, i) => {
-      const col = i % COLS, row = Math.floor(i / COLS);
-      return { x: gap + col * (cw + gap), y: gap + row * (ch + gap), w: cw, h: ch };
-    });
+  function tileMap(w, h) {
+    const gap = 9 * Math.min(w / 1080, h / 1080), sideW = (w - gap * 4) / 3, sideH = (h - gap * 4) / 3;
+    return Array.from({ length: 9 }, (_, n) => ({ x: gap + (n % 3) * (sideW + gap), y: gap + Math.floor(n / 3) * (sideH + gap), w: sideW, h: sideH, n }));
   }
-  function drawImageCover(ctx, frame, item, grade) {
-    ctx.save();
-    ctx.beginPath(); ctx.rect(frame.x, frame.y, frame.w, frame.h); ctx.clip();
-    if (!item || !item.image) {
-      const gradient = ctx.createLinearGradient(frame.x, frame.y, frame.x + frame.w, frame.y + frame.h);
-      gradient.addColorStop(0, '#34303a'); gradient.addColorStop(1, '#24242c');
-      ctx.fillStyle = gradient; ctx.fillRect(frame.x, frame.y, frame.w, frame.h);
-      ctx.fillStyle = 'rgba(245,226,206,.12)';
-      ctx.font = `700 ${Math.min(frame.w, frame.h) * .11}px system-ui`;
-      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-      ctx.fillText(String(frame.index + 1).padStart(2, '0'), frame.x + frame.w / 2, frame.y + frame.h / 2);
+  function paintPhoto(ctx, box, entry, mood) {
+    ctx.save(); ctx.beginPath(); ctx.rect(box.x, box.y, box.w, box.h); ctx.clip();
+    if (entry && entry.image) {
+      const image = entry.image, scale = Math.max(box.w / image.naturalWidth, box.h / image.naturalHeight) * (entry.zoom || 1);
+      const dw = image.naturalWidth * scale, dh = image.naturalHeight * scale;
+      const cx = box.x + box.w / 2 + (entry.panX || 0) * box.w, cy = box.y + box.h / 2 + (entry.panY || 0) * box.h;
+      ctx.filter = mood.filter; ctx.drawImage(image, cx - dw / 2, cy - dh / 2, dw, dh); ctx.filter = 'none';
     } else {
-      const img = item.image;
-      const base = Math.max(frame.w / img.naturalWidth, frame.h / img.naturalHeight);
-      const scale = base * (item.zoom || 1);
-      const dw = img.naturalWidth * scale, dh = img.naturalHeight * scale;
-      const cx = frame.x + frame.w / 2 + (item.panX || 0) * frame.w;
-      const cy = frame.y + frame.h / 2 + (item.panY || 0) * frame.h;
-      ctx.filter = grade.filter;
-      ctx.drawImage(img, cx - dw / 2, cy - dh / 2, dw, dh);
-      ctx.filter = 'none';
+      const fill = ctx.createLinearGradient(box.x, box.y, box.x + box.w, box.y + box.h);
+      fill.addColorStop(0, '#34303a'); fill.addColorStop(1, '#24242c'); ctx.fillStyle = fill; ctx.fillRect(box.x, box.y, box.w, box.h);
+      ctx.fillStyle = 'rgba(245,226,206,.12)'; ctx.font = `700 ${Math.min(box.w, box.h) * .11}px system-ui`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText(String(box.n + 1).padStart(2, '0'), box.x + box.w / 2, box.y + box.h / 2);
     }
-    const shade = ctx.createLinearGradient(0, frame.y, 0, frame.y + frame.h);
-    shade.addColorStop(0, grade.top); shade.addColorStop(.48, 'rgba(8,8,18,0)'); shade.addColorStop(1, grade.bottom);
-    ctx.fillStyle = shade; ctx.fillRect(frame.x, frame.y, frame.w, frame.h);
-    ctx.restore();
+    const veil = ctx.createLinearGradient(0, box.y, 0, box.y + box.h); veil.addColorStop(0, mood.sky); veil.addColorStop(.48, 'rgba(8,8,18,0)'); veil.addColorStop(1, mood.dusk);
+    ctx.fillStyle = veil; ctx.fillRect(box.x, box.y, box.w, box.h); ctx.restore();
   }
-  function drawTitle(ctx, width, height, caption, ink, grade) {
-    if (!caption || !caption.trim()) return;
-    const text = caption.trim().toLocaleUpperCase();
-    const pad = width * .055, maxWidth = width - pad * 2;
-    let size = Math.min(height * .115, width * .12);
-    ctx.save();
-    ctx.font = `400 ${size}px Anton, Impact, sans-serif`;
-    while (ctx.measureText(text).width > maxWidth && size > 22) {
-      size -= Math.max(1, size * .035);
-      ctx.font = `400 ${size}px Anton, Impact, sans-serif`;
-    }
-    const baseline = height * .885;
-    const band = ctx.createLinearGradient(0, baseline - size * 1.45, 0, height);
-    band.addColorStop(0, 'rgba(12,10,19,0)'); band.addColorStop(1, `rgba(12,10,19,${grade.shade + .4})`);
-    ctx.fillStyle = band; ctx.fillRect(0, baseline - size * 1.45, width, height - baseline + size * 1.45);
-    ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic'; ctx.lineJoin = 'round';
-    ctx.shadowColor = 'rgba(15,8,18,.72)'; ctx.shadowBlur = size * .16; ctx.shadowOffsetY = size * .075;
-    ctx.strokeStyle = '#281b20'; ctx.lineWidth = Math.max(3, size * .075); ctx.strokeText(text, width / 2, baseline, maxWidth);
-    ctx.shadowBlur = 0; ctx.shadowOffsetY = 0;
-    ctx.fillStyle = ink || '#fff4dc'; ctx.fillText(text, width / 2, baseline, maxWidth);
-    ctx.restore();
+  function paintCaption(ctx, w, h, words, ink, mood) {
+    if (!words || !words.trim()) return;
+    const phrase = words.trim().toLocaleUpperCase(), inset = w * .055, limit = w - inset * 2; let px = Math.min(h * .115, w * .12);
+    ctx.save(); ctx.font = `400 ${px}px Anton, Impact, sans-serif`;
+    while (ctx.measureText(phrase).width > limit && px > 22) { px -= Math.max(1, px * .035); ctx.font = `400 ${px}px Anton, Impact, sans-serif`; }
+    const base = h * .885, tint = ctx.createLinearGradient(0, base - px * 1.45, 0, h); tint.addColorStop(0, 'rgba(12,10,19,0)'); tint.addColorStop(1, `rgba(12,10,19,${mood.shade + .4})`);
+    ctx.fillStyle = tint; ctx.fillRect(0, base - px * 1.45, w, h - base + px * 1.45); ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic'; ctx.lineJoin = 'round';
+    ctx.shadowColor = 'rgba(15,8,18,.72)'; ctx.shadowBlur = px * .16; ctx.shadowOffsetY = px * .075; ctx.strokeStyle = '#281b20'; ctx.lineWidth = Math.max(3, px * .075); ctx.strokeText(phrase, w / 2, base, limit);
+    ctx.shadowBlur = 0; ctx.shadowOffsetY = 0; ctx.fillStyle = ink || '#fff4dc'; ctx.fillText(phrase, w / 2, base, limit); ctx.restore();
   }
-  function render(canvas, state, options) {
-    const format = layouts[options.format] ? options.format : 'square';
-    const size = layouts[format];
-    if (canvas.width !== size.w || canvas.height !== size.h) { canvas.width = size.w; canvas.height = size.h; }
-    const ctx = canvas.getContext('2d');
-    const grade = grades[options.grade] || grades.vice;
-    ctx.fillStyle = '#16151d'; ctx.fillRect(0, 0, size.w, size.h);
-    const frames = rectangles(size.w, size.h);
-    frames.forEach((rect, index) => drawImageCover(ctx, Object.assign({ index }, rect), state[index], grade));
-    if (options.selected >= 0 && options.outline) {
-      const r = frames[options.selected];
-      ctx.save(); ctx.strokeStyle = '#fff3d8'; ctx.lineWidth = Math.max(2, size.w / 540);
-      ctx.strokeRect(r.x + 1, r.y + 1, r.w - 2, r.h - 2); ctx.restore();
-    }
-    drawTitle(ctx, size.w, size.h, options.caption, options.ink, grade);
+  function render(canvas, photos, settings) {
+    const format = layouts[settings.format] ? settings.format : 'square', [w, h] = layouts[format];
+    if (canvas.width !== w || canvas.height !== h) { canvas.width = w; canvas.height = h; }
+    const ctx = canvas.getContext('2d'), mood = moods[settings.grade] || moods.vice; ctx.fillStyle = '#16151d'; ctx.fillRect(0, 0, w, h);
+    const boxes = tileMap(w, h); boxes.forEach((box, n) => paintPhoto(ctx, box, photos[n], mood));
+    if (settings.selected >= 0 && settings.outline) { const box = boxes[settings.selected]; if (box) { ctx.save(); ctx.strokeStyle = '#fff3d8'; ctx.lineWidth = Math.max(2, w / 540); ctx.strokeRect(box.x + 1, box.y + 1, box.w - 2, box.h - 2); ctx.restore(); } }
+    paintCaption(ctx, w, h, settings.caption, settings.ink, mood);
   }
-  function frameAt(canvas, x, y) {
-    const rect = canvas.getBoundingClientRect();
-    const px = (x - rect.left) * canvas.width / rect.width;
-    const py = (y - rect.top) * canvas.height / rect.height;
-    return rectangles(canvas.width, canvas.height).findIndex((r) => px >= r.x && px <= r.x + r.w && py >= r.y && py <= r.y + r.h);
+  function frameAt(canvas, clientX, clientY) {
+    const bounds = canvas.getBoundingClientRect(), x = (clientX - bounds.left) * canvas.width / bounds.width, y = (clientY - bounds.top) * canvas.height / bounds.height;
+    return tileMap(canvas.width, canvas.height).findIndex((box) => x >= box.x && x <= box.x + box.w && y >= box.y && y <= box.y + box.h);
   }
-  window.CoverArt = { render, frameAt, layouts };
-}());
+  window.CoverArt = { render, frameAt, layouts: Object.fromEntries(Object.entries(layouts).map(([key, size]) => [key, { w: size[0], h: size[1] }])) };
+})();

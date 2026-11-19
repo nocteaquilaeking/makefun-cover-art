@@ -1,21 +1,17 @@
-/* Screenshot scenes: all requested parameters settle without interaction. */
-(function () {
+/* Deterministic scene setup for the screenshot capture harness. */
+(() => {
   'use strict';
-  async function runShot(query, app) {
-    const shot = query.get('shot');
-    if (shot !== 'cover' && shot !== 'editor') return false;
-    const photo = query.get('photo') === 'boulevard' ? 'boulevard' : 'pier';
-    const caption = query.get('caption') || 'CITY OF GOLD';
-    if (shot === 'cover') document.body.classList.add('shot-cover');
-    app.setFormat('square');
-    const image = await app.loadSample(photo);
-    app.fillAll(image, photo);
-    app.setCaption(caption);
+  async function runShot(params, editor) {
+    const mode = params.get('shot');
+    if (mode !== 'cover' && mode !== 'editor') return false;
+    const demo = params.get('photo') === 'boulevard' ? 'boulevard' : 'pier';
+    if (mode === 'cover') document.body.classList.add('shot-cover');
+    editor.setFormat('square');
+    editor.fillAll(await editor.loadSample(demo), demo);
+    editor.setCaption(params.get('caption') || 'CITY OF GOLD');
     await document.fonts.ready;
     await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
-    app.redraw();
-    window.__shotReady = true;
-    return true;
+    editor.redraw(); window.__shotReady = true; return true;
   }
   window.CoverShots = { runShot };
-}());
+})();
