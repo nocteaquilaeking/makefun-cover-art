@@ -1,84 +1,53 @@
-/* Afterglow's original nine-window cover renderer. Panels share a designed grid while each keeps its own crop. */
+/* The cover is a six-frame city montage. Each frame keeps its own photo and crop. */
 (function () {
-  'use strict';
-  const BASE = 900;
-  const GUTTER = 9;
   const PANELS = [
-    { x: 0, y: 0, w: 300, h: 238 }, { x: 309, y: 0, w: 340, h: 238 }, { x: 658, y: 0, w: 242, h: 238 },
-    { x: 0, y: 247, w: 250, h: 310 }, { x: 259, y: 247, w: 382, h: 310 }, { x: 650, y: 247, w: 250, h: 310 },
-    { x: 0, y: 566, w: 286, h: 334 }, { x: 295, y: 566, w: 335, h: 334 }, { x: 639, y: 566, w: 261, h: 334 }
+    { x: 0.035, y: 0.035, w: 0.455, h: 0.305, id: 0 },
+    { x: 0.510, y: 0.035, w: 0.455, h: 0.305, id: 1 },
+    { x: 0.035, y: 0.360, w: 0.285, h: 0.390, id: 2 },
+    { x: 0.340, y: 0.360, w: 0.300, h: 0.390, id: 3 },
+    { x: 0.660, y: 0.360, w: 0.305, h: 0.390, id: 4 },
+    { x: 0.035, y: 0.770, w: 0.930, h: 0.195, id: 5 }
   ];
-  const GRADES = {
-    sunset: { filter: 'saturate(1.16) contrast(1.08)', top: 'rgba(50,28,79,.14)', bottom: 'rgba(237,91,100,.25)', edge: 'rgba(249,186,130,.12)' },
-    neon: { filter: 'saturate(1.48) contrast(1.15) hue-rotate(7deg)', top: 'rgba(20,28,90,.24)', bottom: 'rgba(28,190,193,.19)', edge: 'rgba(211,75,201,.16)' },
-    clean: { filter: 'saturate(.88) contrast(1.03) brightness(1.05)', top: 'rgba(248,231,211,.10)', bottom: 'rgba(27,39,53,.23)', edge: 'rgba(255,245,226,.09)' }
+  const LOOKS = {
+    vice: { filter: 'saturate(1.13) contrast(1.05)', wash: 'rgba(247,101,125,.20)', gradient: ['rgba(253,196,124,0)', 'rgba(205,65,130,.43)'], accent: '#ffc178' },
+    neon: { filter: 'saturate(1.35) contrast(1.15) hue-rotate(13deg)', wash: 'rgba(25,33,118,.30)', gradient: ['rgba(20,221,223,0)', 'rgba(29,34,112,.66)'], accent: '#55e8df' },
+    clean: { filter: 'saturate(.82) contrast(1.04)', wash: 'rgba(230,213,174,.09)', gradient: ['rgba(18,31,49,0)', 'rgba(14,22,39,.56)'], accent: '#f3dfb5' }
   };
-  function drawImageCrop(ctx, photo, rect, crop, unit) {
-    const x = rect.x * unit, y = rect.y * unit, w = rect.w * unit, h = rect.h * unit;
+  function cropRect(photo, panel, canvas, state) {
+    const w = panel.w * canvas.width, h = panel.h * canvas.height;
+    const base = Math.max(w / photo.naturalWidth, h / photo.naturalHeight);
+    const scale = base * state.zoom;
+    const dw = photo.naturalWidth * scale, dh = photo.naturalHeight * scale;
+    const cx = w / 2 + state.x * w, cy = h / 2 + state.y * h;
+    return { x: panel.x * canvas.width + cx - dw / 2, y: panel.y * canvas.height + cy - dh / 2, w: dw, h: dh };
+  }
+  function drawPanel(ctx, canvas, panel, state, look) {
+    const x = panel.x * canvas.width, y = panel.y * canvas.height, w = panel.w * canvas.width, h = panel.h * canvas.height;
     ctx.save(); ctx.beginPath(); ctx.rect(x, y, w, h); ctx.clip();
-    ctx.fillStyle = '#28293b'; ctx.fillRect(x, y, w, h);
-    if (photo) {
-      const scale = Math.max(w / photo.naturalWidth, h / photo.naturalHeight) * (crop.zoom || 1);
-      const dw = photo.naturalWidth * scale, dh = photo.naturalHeight * scale;
-      const cx = x + w / 2 + (crop.x || 0) * unit, cy = y + h / 2 + (crop.y || 0) * unit;
-      ctx.filter = crop.gradeFilter || 'none';
-      ctx.drawImage(photo, cx - dw / 2, cy - dh / 2, dw, dh);
-      ctx.filter = 'none';
-    } else {
-      const grad = ctx.createLinearGradient(x, y, x + w, y + h);
-      grad.addColorStop(0, '#28324a'); grad.addColorStop(.55, '#815474'); grad.addColorStop(1, '#ed9d73');
-      ctx.fillStyle = grad; ctx.fillRect(x, y, w, h);
-      ctx.fillStyle = '#fff'; ctx.globalAlpha = .6;
-      ctx.beginPath(); ctx.arc(x + w * .72, y + h * .3, Math.min(w, h) * .14, 0, Math.PI * 2); ctx.fill(); ctx.globalAlpha = 1;
-    }
+    if (state.photo) { ctx.filter = look.filter; const r = cropRect(state.photo, panel, canvas, state); ctx.drawImage(state.photo, r.x, r.y, r.w, r.h); ctx.filter = 'none'; }
+    else { const g = ctx.createLinearGradient(x, y, x + w, y + h); g.addColorStop(0, '#303549'); g.addColorStop(.55, '#9c526f'); g.addColorStop(1, '#e08e76'); ctx.fillStyle = g; ctx.fillRect(x, y, w, h); }
+    ctx.fillStyle = look.wash; ctx.fillRect(x, y, w, h);
+    const shade = ctx.createLinearGradient(0, y + h * .42, 0, y + h); shade.addColorStop(0, look.gradient[0]); shade.addColorStop(1, look.gradient[1]); ctx.fillStyle = shade; ctx.fillRect(x, y, w, h);
     ctx.restore();
+    ctx.strokeStyle = 'rgba(255,240,220,.20)'; ctx.lineWidth = Math.max(1, canvas.width * .0012); ctx.strokeRect(x, y, w, h);
   }
-  function drawCover(canvas, state, width, height) {
-    const ctx = canvas.getContext('2d');
-    const w = width || canvas.width, h = height || canvas.height;
-    if (canvas.width !== w || canvas.height !== h) { canvas.width = w; canvas.height = h; }
-    ctx.clearRect(0, 0, w, h);
-    ctx.fillStyle = '#171525'; ctx.fillRect(0, 0, w, h);
-    const unit = 1;
-    const artW = BASE, artH = BASE;
-    const ox = 0, oy = 0;
-    ctx.save(); ctx.scale(w / BASE, h / BASE);
-    const grade = GRADES[state.look] || GRADES.sunset;
-    PANELS.forEach((rect, i) => {
-      const crop = state.crops[i] || { x: 0, y: 0, zoom: 1 };
-      const photo = state.panelPhotos[i] || state.photos[0] || null;
-      drawImageCrop(ctx, photo && photo.image, rect, crop, unit);
-      const px = rect.x * unit, py = rect.y * unit, pw = rect.w * unit, ph = rect.h * unit;
-      ctx.save();
-      const shade = ctx.createLinearGradient(0, py, 0, py + ph);
-      shade.addColorStop(0, grade.top); shade.addColorStop(.55, 'rgba(8,11,23,0)'); shade.addColorStop(1, grade.bottom);
-      ctx.fillStyle = shade; ctx.fillRect(px, py, pw, ph);
-      ctx.fillStyle = grade.edge; ctx.fillRect(px, py, pw, ph);
-      ctx.restore();
-    });
-    // Restrained print marks make the panel system feel like a collected street poster.
-    ctx.fillStyle = 'rgba(10,12,22,.66)'; ctx.fillRect(17 * unit, 17 * unit, 159 * unit, 25 * unit);
-    ctx.font = `700 ${11 * unit}px ui-sans-serif,system-ui`; ctx.textAlign = 'left'; ctx.fillStyle = '#fff3dd';
-    ctx.fillText('AFTERGLOW  /  CITY STORIES', 25 * unit, 34 * unit);
-    const title = String(state.caption || '').trim().toUpperCase();
-    if (title) {
-      let size = Math.min(95, 900 / Math.max(6, title.length) * 1.2);
-      ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';
-      ctx.font = `${size * unit}px Anton, Impact, sans-serif`;
-      while (ctx.measureText(title).width > artW * .88 && size > 22) { size -= 2; ctx.font = `${size * unit}px Anton, Impact, sans-serif`; }
-      const baseline = 827 * unit;
-      ctx.save(); ctx.shadowColor = 'rgba(8,7,17,.85)'; ctx.shadowBlur = 14 * unit; ctx.shadowOffsetY = 4 * unit;
-      ctx.lineJoin = 'round'; ctx.lineWidth = Math.max(2, 5 * unit); ctx.strokeStyle = 'rgba(25,16,31,.92)';
-      ctx.strokeText(title, artW / 2, baseline, artW * .9);
-      ctx.fillStyle = state.captionColor || '#fff5df'; ctx.fillText(title, artW / 2, baseline, artW * .9);
-      ctx.restore();
-      ctx.fillStyle = state.captionColor || '#fff5df'; ctx.globalAlpha = .8;
-      ctx.fillRect(artW * .38, 844 * unit, artW * .24, 2 * unit); ctx.globalAlpha = 1;
-    }
-    ctx.restore();
-    // Gutter color and a narrow outer keyline keep panels crisp at every output size.
-    ctx.strokeStyle = 'rgba(11,12,20,.9)'; ctx.lineWidth = GUTTER * unit; ctx.strokeRect(ox, oy, artW, artH);
-    ctx.strokeStyle = 'rgba(255,241,220,.28)'; ctx.lineWidth = 1.2 * unit; ctx.strokeRect(ox + unit, oy + unit, artW - 2 * unit, artH - 2 * unit);
+  function drawHeadline(ctx, canvas, caption, color, look) {
+    const w = canvas.width, h = canvas.height, text = (caption || '').trim().toUpperCase();
+    ctx.save(); ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.font = `${Math.round(h * .105)}px Anton, Impact, sans-serif`;
+    let size = h * .105;
+    while (ctx.measureText(text).width > w * .85 && size > 24) { size -= 2; ctx.font = `${Math.round(size)}px Anton, Impact, sans-serif`; }
+    ctx.lineJoin = 'round'; ctx.lineWidth = Math.max(4, size * .065); ctx.strokeStyle = 'rgba(25,17,34,.92)'; ctx.shadowColor = 'rgba(8,9,18,.55)'; ctx.shadowBlur = size * .17; ctx.shadowOffsetY = size * .055;
+    ctx.strokeText(text, w * .5, h * .862); ctx.shadowBlur = 0; ctx.shadowOffsetY = 0; ctx.fillStyle = color || '#fff1d6'; ctx.fillText(text, w * .5, h * .862);
+    ctx.font = `700 ${Math.round(h * .013)}px ui-sans-serif, sans-serif`; ctx.letterSpacing = `${h * .004}px`; ctx.fillStyle = look.accent; ctx.fillText('A CITY NEVER TELLS THE WHOLE STORY', w * .5, h * .934); ctx.restore();
   }
-  window.AfterglowCover = { drawCover, panels: PANELS, grades: GRADES };
+  function drawCover(canvas, panels, caption, color, lookName, selected, options) {
+    const ctx = canvas.getContext('2d'), look = LOOKS[lookName] || LOOKS.vice, opts = options || {};
+    ctx.clearRect(0, 0, canvas.width, canvas.height); ctx.fillStyle = '#11111b'; ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = '#f8eee0'; ctx.fillRect(canvas.width * .018, canvas.height * .018, canvas.width * .964, canvas.height * .964);
+    PANELS.forEach((p) => drawPanel(ctx, canvas, p, panels[p.id], look));
+    drawHeadline(ctx, canvas, caption, color, look);
+    if (opts.selection) { const p = PANELS[selected], x = p.x * canvas.width, y = p.y * canvas.height, w = p.w * canvas.width, h = p.h * canvas.height; ctx.save(); ctx.strokeStyle = '#5ce3da'; ctx.lineWidth = Math.max(3, canvas.width * .004); ctx.strokeRect(x + 1, y + 1, w - 2, h - 2); ctx.restore(); }
+  }
+  window.CoverArt = { panels: PANELS, looks: LOOKS, drawCover, cropRect };
 })();

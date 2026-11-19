@@ -1,15 +1,16 @@
-/* Screenshot hooks: ?shot=cover|editor&photo=pier|boulevard&caption=... */
+/* Deterministic screenshot setup. The app signals readiness only after the sample is painted. */
 (function () {
-  'use strict';
-  async function runShot(shot, query, app) {
+  async function runShot(shot, query, loadSample, paint) {
     if (shot !== 'cover' && shot !== 'editor') return false;
-    const sample = query.get('photo') === 'boulevard' ? 'boulevard' : 'pier';
+    const photo = query.get('photo') === 'boulevard' ? 'boulevard' : 'pier';
     document.body.classList.add(shot === 'cover' ? 'shot-cover' : 'shot-editor');
-    await app.loadSample(sample, query.get('caption') || 'Sunset Heist');
-    if (document.fonts && document.fonts.ready) await document.fonts.ready;
-    await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+    await loadSample(`./samples/${photo}.jpg`);
+    const caption = query.get('caption');
+    paint(caption === null ? 'SUNSET HEIST' : caption);
+    await document.fonts.ready;
+    await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
     window.__shotReady = true;
     return true;
   }
-  window.AfterglowShots = { runShot };
+  window.runCoverShot = runShot;
 })();
