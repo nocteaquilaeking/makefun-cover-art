@@ -1,233 +1,110 @@
-/* Connect the form controls to the cover painter and downloadable canvas. */
+/* Bind the studio controls to the canvas renderer. */
 (() => {
   'use strict';
+  const el = (id) => document.getElementById(id);
+  const canvas = el('cover'), upload = el('photo'), caption = el('caption'), status = el('status');
+  const zoom = el('zoom'), library = el('photo-library'), frameList = el('frame-strip');
+  const frames = Array.from({ length: 9 }, () => ({ image: null, zoom: 1, panX: 0, panY: 0, label: '' }));
+  const libraryItems = [], paths = { pier: './samples/pier.jpg', boulevard: './samples/boulevard.jpg' };
+  let selected = 0, currentPhoto = null, grade = 'vice', ink = '#fff4dc', format = 'square', drag = null;
 
-  const byId = (key) => document.getElementById(key);
-  const canvas = byId('cover');
-  const upload = byId('photo');
-  const captionField = byId('caption');
-  const message = byId('status');
-  const zoomField = byId('zoom');
-  const photoShelf = byId('photo-library');
-  const frameShelf = byId('frame-strip');
-  const tiles = Array.from({ length: 9 }, () => ({ image: null, zoom: 1, panX: 0, panY: 0, label: '' }));
-  const savedPhotos = [];
-  const sampleUrls = { pier: './samples/pier.jpg', boulevard: './samples/boulevard.jpg' };
-  let activeTile = 0;
-  let activePhoto = null;
-  let activeGrade = 'vice';
-  let titleInk = '#fff4dc';
-  let canvasFormat = 'square';
-  let dragState = null;
-
-  function redraw() {
-    CoverArt.render(canvas, tiles, {
-      format: canvasFormat,
-      grade: activeGrade,
-      caption: captionField.value,
-      ink: titleInk,
-      selected: activeTile,
-      outline: !document.body.classList.contains('shot-cover')
-    });
-    document.body.dataset.format = canvasFormat;
+  function repaint() {
+    CoverArt.render(canvas, frames, { format, grade, caption: caption.value, ink, selected, outline: !document.body.classList.contains('shot-cover') });
+    document.body.dataset.format = format;
   }
-
-  function selectTile(index) {
-    if (index < 0 || index >= tiles.length) return;
-    activeTile = index;
-    frameShelf.querySelectorAll('button').forEach((button, position) => button.classList.toggle('active', position === index));
-    byId('selected-label').textContent = `Frame ${String(index + 1).padStart(2, '0')}`;
-    zoomField.value = tiles[index].zoom || 1;
-    byId('zoom-value').textContent = `${Number(zoomField.value).toFixed(1)}×`;
-    redraw();
+  function chooseFrame(index) {
+    if (index < 0 || index >= frames.length) return;
+    selected = index;
+    frameList.querySelectorAll('button').forEach((b, i) => b.classList.toggle('active', i === index));
+    el('selected-label').textContent = `Frame ${String(index + 1).padStart(2, '0')}`;
+    zoom.value = frames[index].zoom || 1; el('zoom-value').textContent = `${Number(zoom.value).toFixed(1)}×`; repaint();
   }
-
-  function buildTileButtons() {
-    frameShelf.replaceChildren();
-    tiles.forEach((_, position) => {
-      const control = document.createElement('button');
-      control.type = 'button';
-      control.className = `frame-button${position === activeTile ? ' active' : ''}`;
-      control.textContent = String(position + 1).padStart(2, '0');
-      control.setAttribute('aria-label', `Select frame ${position + 1}`);
-      control.addEventListener('click', () => selectTile(position));
-      frameShelf.append(control);
+  function makeFramePicker() {
+    frameList.replaceChildren();
+    frames.forEach((_, i) => {
+      const button = document.createElement('button'); button.type = 'button'; button.className = `frame-button${i === selected ? ' active' : ''}`;
+      button.textContent = String(i + 1).padStart(2, '0'); button.setAttribute('aria-label', `Select frame ${i + 1}`);
+      button.addEventListener('click', () => chooseFrame(i)); frameList.append(button);
     });
   }
-
-  function refreshPhotoShelf() {
-    photoShelf.replaceChildren();
-    if (!savedPhotos.length) {
-      const empty = document.createElement('span');
-      empty.className = 'empty-library';
-      empty.textContent = 'Your photos will appear here.';
-      photoShelf.append(empty);
-      return;
-    }
-    savedPhotos.forEach((photo) => {
-      const control = document.createElement('button');
-      control.type = 'button';
-      control.className = `photo-item${photo === activePhoto ? ' selected' : ''}`;
-      control.textContent = photo.label;
-      control.title = `${photo.label} · apply to selected frame`;
-      control.addEventListener('click', () => {
-        activePhoto = photo;
-        putInTile(photo);
-        refreshPhotoShelf();
-      });
-      photoShelf.append(control);
+  function showLibrary() {
+    library.replaceChildren();
+    if (!libraryItems.length) { const note = document.createElement('span'); note.className = 'empty-library'; note.textContent = 'Your photos will appear here.'; library.append(note); return; }
+    libraryItems.forEach((photo) => {
+      const button = document.createElement('button'); button.type = 'button'; button.className = `photo-item${photo === currentPhoto ? ' selected' : ''}`;
+      button.textContent = photo.label; button.title = `${photo.label} · apply to selected frame`;
+      button.addEventListener('click', () => { currentPhoto = photo; applyPhoto(photo); showLibrary(); }); library.append(button);
     });
   }
-
-  function savePhoto(image, label, source) {
-    const photo = { image, label, source, key: `${Date.now()}-${Math.random()}` };
-    savedPhotos.push(photo);
-    activePhoto = photo;
-    refreshPhotoShelf();
-    return photo;
+  function remember(image, label, source) {
+    const item = { image, label, source, key: `${Date.now()}-${Math.random()}` };
+    libraryItems.push(item); currentPhoto = item; showLibrary(); return item;
   }
-
-  function putInTile(photo) {
-    tiles[activeTile] = { image: photo.image, zoom: 1, panX: 0, panY: 0, label: photo.label };
-    message.textContent = `${photo.label} added to frame ${String(activeTile + 1).padStart(2, '0')}`;
-    selectTile(activeTile);
+  function applyPhoto(photo) {
+    frames[selected] = { image: photo.image, zoom: 1, panX: 0, panY: 0, label: photo.label };
+    status.textContent = `${photo.label} added to frame ${String(selected + 1).padStart(2, '0')}`; chooseFrame(selected);
   }
-
-  function fillCanvas(value, label) {
-    const photo = value && value.image ? value : savePhoto(value, label || 'Photo', '');
-    activePhoto = photo;
-    for (let index = 0; index < tiles.length; index += 1) {
-      tiles[index] = { image: photo.image, zoom: 1, panX: 0, panY: 0, label: photo.label };
-    }
-    refreshPhotoShelf();
-    selectTile(activeTile);
-    message.textContent = `${photo.label} fills all 9 frames`;
+  function fillAll(value, label) {
+    const photo = value && value.image ? value : remember(value, label || 'Photo', ''); currentPhoto = photo;
+    frames.forEach((_, i) => { frames[i] = { image: photo.image, zoom: 1, panX: 0, panY: 0, label: photo.label }; });
+    showLibrary(); chooseFrame(selected); status.textContent = `${photo.label} fills all 9 frames`;
   }
-
-  function fetchImage(source) {
-    return new Promise((resolve, reject) => {
-      const image = new Image();
-      image.onload = () => resolve(image);
-      image.onerror = reject;
-      image.src = source;
-    });
+  function loadImage(source) {
+    return new Promise((resolve, reject) => { const image = new Image(); image.onload = () => resolve(image); image.onerror = reject; image.src = source; });
   }
-
-  async function fetchSample(name) {
-    return fetchImage(sampleUrls[name] || sampleUrls.pier);
-  }
-
-  function setCaption(value) {
-    captionField.value = value.slice(0, 34);
-    redraw();
-  }
-
-  function setFormat(value) {
-    canvasFormat = value;
-    byId('format').value = value;
-    redraw();
-  }
+  const loadSample = (name) => loadImage(paths[name] || paths.pier);
+  function setCaption(value) { caption.value = value.slice(0, 34); repaint(); }
+  function setFormat(value) { format = value; el('format').value = value; repaint(); }
 
   upload.addEventListener('change', async (event) => {
-    const accepted = Array.from(event.target.files || []).filter((file) => file.type.startsWith('image/'));
-    for (const file of accepted) {
+    const images = Array.from(event.target.files || []).filter((file) => file.type.startsWith('image/'));
+    for (const file of images) {
       const source = URL.createObjectURL(file);
-      try {
-        putInTile(savePhoto(await fetchImage(source), file.name, source));
-      } catch (_) {
-        URL.revokeObjectURL(source);
-        message.textContent = `Couldn't open ${file.name}`;
-      }
+      try { applyPhoto(remember(await loadImage(source), file.name, source)); }
+      catch (_) { URL.revokeObjectURL(source); status.textContent = `Couldn't open ${file.name}`; }
     }
     upload.value = '';
   });
-
-  document.querySelectorAll('[data-sample]').forEach((control) => control.addEventListener('click', async () => {
-    const name = control.dataset.sample;
-    try {
-      const photo = savePhoto(await fetchSample(name), name === 'boulevard' ? 'Boulevard demo' : 'Pier demo', sampleUrls[name]);
-      putInTile(photo);
-    } catch (_) {
-      message.textContent = 'The bundled demo photo could not be opened';
-    }
+  document.querySelectorAll('[data-sample]').forEach((button) => button.addEventListener('click', async () => {
+    const name = button.dataset.sample;
+    try { applyPhoto(remember(await loadSample(name), name === 'boulevard' ? 'Boulevard demo' : 'Pier demo', paths[name])); }
+    catch (_) { status.textContent = 'The bundled demo photo could not be opened'; }
   }));
-
-  byId('fill-all').addEventListener('click', () => {
-    if (activePhoto) fillCanvas(activePhoto);
-    else message.textContent = 'Upload a photo or choose a demo first';
-  });
-  captionField.addEventListener('input', redraw);
-  zoomField.addEventListener('input', () => {
-    tiles[activeTile].zoom = Number(zoomField.value);
-    byId('zoom-value').textContent = `${tiles[activeTile].zoom.toFixed(1)}×`;
-    redraw();
-  });
-  document.querySelectorAll('.grade-card').forEach((control) => control.addEventListener('click', () => {
-    activeGrade = control.dataset.grade;
-    document.querySelectorAll('.grade-card').forEach((card) => card.classList.toggle('selected', card === control));
-    redraw();
+  el('fill-all').addEventListener('click', () => currentPhoto ? fillAll(currentPhoto) : (status.textContent = 'Upload a photo or choose a demo first'));
+  caption.addEventListener('input', repaint);
+  zoom.addEventListener('input', () => { frames[selected].zoom = Number(zoom.value); el('zoom-value').textContent = `${frames[selected].zoom.toFixed(1)}×`; repaint(); });
+  document.querySelectorAll('.grade-card').forEach((button) => button.addEventListener('click', () => {
+    grade = button.dataset.grade; document.querySelectorAll('.grade-card').forEach((card) => card.classList.toggle('selected', card === button)); repaint();
   }));
-  document.querySelectorAll('.swatch').forEach((control) => control.addEventListener('click', () => {
-    titleInk = control.dataset.ink;
-    document.querySelectorAll('.swatch').forEach((swatch) => swatch.classList.toggle('active', swatch === control));
-    redraw();
+  document.querySelectorAll('.swatch').forEach((button) => button.addEventListener('click', () => {
+    ink = button.dataset.ink; document.querySelectorAll('.swatch').forEach((item) => item.classList.toggle('active', item === button)); repaint();
   }));
-  byId('format').addEventListener('change', (event) => setFormat(event.target.value));
+  el('format').addEventListener('change', (event) => setFormat(event.target.value));
 
   canvas.addEventListener('pointerdown', (event) => {
-    const index = CoverArt.frameAt(canvas, event.clientX, event.clientY);
-    if (index < 0) return;
-    if (index !== activeTile) selectTile(index);
-    if (!tiles[activeTile].image) {
-      if (activePhoto) putInTile(activePhoto);
-      else return;
-    }
-    canvas.setPointerCapture(event.pointerId);
-    const bounds = canvas.getBoundingClientRect();
-    dragState = {
-      x: event.clientX, y: event.clientY,
-      panX: tiles[activeTile].panX || 0, panY: tiles[activeTile].panY || 0,
-      width: bounds.width / 3, height: bounds.height / 3
-    };
+    const index = CoverArt.frameAt(canvas, event.clientX, event.clientY); if (index < 0) return;
+    if (index !== selected) chooseFrame(index);
+    if (!frames[selected].image) { if (currentPhoto) applyPhoto(currentPhoto); else return; }
+    canvas.setPointerCapture(event.pointerId); const box = canvas.getBoundingClientRect();
+    drag = { x: event.clientX, y: event.clientY, panX: frames[selected].panX || 0, panY: frames[selected].panY || 0, w: box.width / 3, h: box.height / 3 };
   });
   canvas.addEventListener('pointermove', (event) => {
-    if (!dragState) return;
-    tiles[activeTile].panX = dragState.panX + (event.clientX - dragState.x) / dragState.width;
-    tiles[activeTile].panY = dragState.panY + (event.clientY - dragState.y) / dragState.height;
-    redraw();
+    if (!drag) return;
+    frames[selected].panX = drag.panX + (event.clientX - drag.x) / drag.w;
+    frames[selected].panY = drag.panY + (event.clientY - drag.y) / drag.h; repaint();
   });
-  ['pointerup', 'pointercancel', 'lostpointercapture'].forEach((kind) => canvas.addEventListener(kind, () => { dragState = null; }));
-
-  byId('export').addEventListener('click', () => {
-    redraw();
-    canvas.toBlob((blob) => {
-      if (!blob) {
-        message.textContent = 'PNG export failed';
-        return;
-      }
-      const address = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      const size = CoverArt.layouts[canvasFormat];
-      link.href = address;
-      link.download = `afterglow-${size.w}x${size.h}.png`;
-      document.body.append(link);
-      link.click();
-      link.remove();
-      setTimeout(() => URL.revokeObjectURL(address), 1000);
-      message.textContent = `Saved ${size.w} × ${size.h} PNG`;
-    }, 'image/png');
-  });
-
-  buildTileButtons();
-  refreshPhotoShelf();
-  redraw();
-
-  const sceneApi = { redraw, loadSample: fetchSample, fillAll: fillCanvas, setCaption, setFormat };
-  const query = new URLSearchParams(location.search);
-  if (query.has('shot')) {
-    CoverShots.runShot(query, sceneApi).catch(() => {
-      message.textContent = 'The screenshot scene could not load';
-      window.__shotReady = true;
+  ['pointerup', 'pointercancel', 'lostpointercapture'].forEach((name) => canvas.addEventListener(name, () => { drag = null; }));
+  el('export').addEventListener('click', () => {
+    repaint(); CoverArt.exportPng(canvas, frames, { format, grade, caption: caption.value, ink, selected, outline: false }, (blob) => {
+      if (!blob) { status.textContent = 'PNG export failed'; return; }
+      const url = URL.createObjectURL(blob), link = document.createElement('a'), size = CoverArt.layouts[format];
+      link.href = url; link.download = `afterglow-${size.w}x${size.h}.png`; document.body.append(link); link.click(); link.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 1000); status.textContent = `Saved ${size.w} × ${size.h} PNG`;
     });
-  }
+  });
+
+  makeFramePicker(); showLibrary(); repaint();
+  const api = { redraw: repaint, loadSample, fillAll, setCaption, setFormat };
+  const query = new URLSearchParams(location.search);
+  if (query.has('shot')) CoverShots.runShot(query, api).catch(() => { status.textContent = 'The screenshot scene could not load'; window.__shotReady = true; });
 })();
