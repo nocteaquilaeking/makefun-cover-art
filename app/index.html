@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#10131d">
+  <title>Afterglow — Cover Studio</title>
+  <link rel="stylesheet" href="./style.css">
+</head>
+<body>
+  <main class="studio" id="studio">
+    <header class="topbar"><a class="brand" href="#" aria-label="Afterglow home"><span class="brand-mark">A</span> AFTERGLOW <i>STUDIO</i></a><div class="top-meta"><span class="save-dot"></span> YOUR CANVAS IS PRIVATE <span class="meta-divider"></span> OFFLINE READY</div></header>
+    <section class="workspace">
+      <aside class="sidebar">
+        <div class="eyebrow">COVER DESIGNER <span>01 / 01</span></div>
+        <h1>Make your<br><em>own legend.</em></h1>
+        <p class="intro">Build a city story from your photos. Drag a panel to frame the moment.</p>
+        <div class="step-heading"><span>01</span> YOUR PHOTOS</div>
+        <div class="photo-actions"><label class="upload-button" for="photo-input"><span>＋</span> Add photos</label><button id="demo-pier" class="text-button" type="button">Pier demo</button><button id="demo-boulevard" class="text-button" type="button">Boulevard</button></div>
+        <input id="photo-input" type="file" accept="image/*" multiple hidden>
+        <div id="photo-library" class="photo-library" aria-live="polite"><div class="empty-library">Add a photo or choose a demo to begin.</div></div>
+        <div class="assign-row"><button id="assign-all" class="quiet-button" type="button">Fill all panels</button><span id="selected-label">Select a panel</span></div>
+        <div class="step-heading"><span>02</span> YOUR TITLE</div>
+        <label class="field-label" for="caption">Cover caption</label>
+        <input id="caption" class="caption-input" type="text" maxlength="32" value="AFTER THE GLOW" autocomplete="off">
+        <div class="caption-options"><div><span class="field-label">Letter colour</span><div class="swatches" role="group" aria-label="Caption colour"><button class="swatch active" data-color="#fff5df" style="--swatch:#fff5df" aria-label="Ivory"></button><button class="swatch" data-color="#ffcc62" style="--swatch:#ffcc62" aria-label="Gold"></button><button class="swatch" data-color="#f47caa" style="--swatch:#f47caa" aria-label="Rose"></button><button class="swatch" data-color="#82f0e1" style="--swatch:#82f0e1" aria-label="Mint"></button></div></div><span class="caption-hint">A LITTLE LOUDER</span></div>
+        <div class="step-heading grade-heading"><span>03</span> COLOUR STORY</div>
+        <div class="looks" role="group" aria-label="Colour grade"><button class="look active" data-look="sunset"><span class="look-chip sunset-chip"></span><span>Vice Sunset<small>Warm · cinematic</small></span><b>✓</b></button><button class="look" data-look="neon"><span class="look-chip neon-chip"></span><span>Neon Night<small>Electric · after hours</small></span><b>✓</b></button><button class="look" data-look="clean"><span class="look-chip clean-chip"></span><span>Clean Poster<small>Bright · editorial</small></span><b>✓</b></button></div>
+        <div class="step-heading size-heading"><span>04</span> EXPORT SIZE</div>
+        <select id="format" class="format-select" aria-label="Export size"><option value="square">Square · 1080 × 1080</option><option value="portrait">Portrait · 1080 × 1350</option><option value="landscape">Landscape · 1920 × 1080</option></select>
+        <button id="export" class="export-button" type="button"><span>Download cover</span><span>↗</span></button>
+        <p class="privacy-note"><span>▣</span> Photos stay on this device. Nothing is uploaded.</p>
+      </aside>
+      <section class="preview-area" aria-label="Cover preview">
+        <div class="preview-toolbar"><div><span class="live-dot"></span> LIVE PREVIEW <span class="preview-subtitle">· SELECT A PANEL TO EDIT</span></div><div class="zoom-control"><button id="zoom-out" aria-label="Zoom out">−</button><span id="zoom-label">100%</span><button id="zoom-in" aria-label="Zoom in">＋</button></div></div>
+        <div class="canvas-wrap"><canvas id="cover" width="900" height="900" tabindex="0" aria-label="Cover preview with selectable photo panels"></canvas></div>
+        <div class="preview-footer"><span><kbd>DRAG</kbd> REFRAME PHOTO</span><span>✳ &nbsp; MADE BY YOU, FOR YOU</span><span id="panel-count">9 PANELS</span></div>
+      </section>
+    </section>
+  </main>
+  <script src="./src/cover.js"></script>
+  <script src="./src/shots.js"></script>
+  <script src="./src/main.js"></script>
+</body>
+</html>
