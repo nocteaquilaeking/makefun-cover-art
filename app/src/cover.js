@@ -1,72 +1,96 @@
-/* Original six-panel cover renderer. All photo decoding and drawing stays in this browser. */
+/* Canvas renderer for the original Afterglow panel cover. */
 (function () {
   'use strict';
-  const PANEL_LAYOUTS = {
-    square: [
-      [.035,.035,.30,.39], [.345,.035,.30,.245], [.655,.035,.31,.245],
-      [.345,.29,.30,.31], [.655,.29,.31,.31], [.035,.435,.30,.53],
-      [.345,.61,.30,.355], [.655,.61,.31,.355]
-    ],
-    portrait: [
-      [.035,.025,.30,.30], [.345,.025,.30,.20], [.655,.025,.31,.20],
-      [.345,.235,.30,.265], [.655,.235,.31,.265], [.035,.335,.30,.40],
-      [.345,.51,.30,.465], [.655,.51,.31,.465]
-    ],
-    landscape: [
-      [.025,.035,.29,.42], [.325,.035,.31,.265], [.645,.035,.33,.265],
-      [.325,.315,.31,.37], [.645,.315,.33,.37], [.025,.465,.29,.50],
-      [.325,.695,.31,.27], [.645,.695,.33,.27]
-    ]
+  const COLS = 3, ROWS = 3, GUTTER = 9;
+  const layouts = {
+    square: { w: 1080, h: 1080 },
+    portrait: { w: 1080, h: 1350 },
+    landscape: { w: 1920, h: 1080 }
   };
-  const GRADES = {
-    vice: { filter:'saturate(1.18) contrast(1.06)', top:'#ffbb7550', bottom:'#f341764c', accent:'#ff714f' },
-    neon: { filter:'saturate(1.32) contrast(1.12) hue-rotate(10deg)', top:'#22d8e456', bottom:'#6626ca62', accent:'#53f2db' },
-    clean:{ filter:'saturate(.91) contrast(1.02)', top:'#ffe8b020', bottom:'#332c361f', accent:'#f0c76d' }
+  const grades = {
+    vice: { filter: 'saturate(1.13) contrast(1.06) sepia(.13)', top: 'rgba(255,184,82,.13)', bottom: 'rgba(191,38,99,.28)', shade: .14 },
+    neon: { filter: 'saturate(1.5) contrast(1.14) hue-rotate(-8deg)', top: 'rgba(0,225,233,.19)', bottom: 'rgba(151,22,205,.37)', shade: .2 },
+    clean: { filter: 'saturate(.92) contrast(1.02) brightness(1.03)', top: 'rgba(255,249,225,.04)', bottom: 'rgba(27,28,42,.13)', shade: .12 }
   };
-  function panelRects(width,height,layout) {
-    return (PANEL_LAYOUTS[layout] || PANEL_LAYOUTS.square).map((r,i)=>({id:i,x:r[0]*width,y:r[1]*height,w:r[2]*width,h:r[3]*height}));
+  function rectangles(width, height) {
+    const gap = GUTTER * Math.min(width / 1080, height / 1080);
+    const cw = (width - gap * (COLS + 1)) / COLS;
+    const ch = (height - gap * (ROWS + 1)) / ROWS;
+    return Array.from({ length: 9 }, (_, i) => {
+      const col = i % COLS, row = Math.floor(i / COLS);
+      return { x: gap + col * (cw + gap), y: gap + row * (ch + gap), w: cw, h: ch };
+    });
   }
-  function drawPhoto(ctx, photo, rect, crop, grade) {
-    if (!photo) {
-      ctx.fillStyle='#242632'; ctx.fillRect(rect.x,rect.y,rect.w,rect.h);
-      ctx.strokeStyle='#454754';ctx.lineWidth=2;ctx.strokeRect(rect.x+5,rect.y+5,rect.w-10,rect.h-10);
-      ctx.fillStyle='#aaa8b0';ctx.font='700 18px system-ui';ctx.textAlign='center';ctx.fillText('ADD PHOTO',rect.x+rect.w/2,rect.y+rect.h/2);
-      return;
+  function drawImageCover(ctx, frame, item, grade) {
+    ctx.save();
+    ctx.beginPath(); ctx.rect(frame.x, frame.y, frame.w, frame.h); ctx.clip();
+    if (!item || !item.image) {
+      const gradient = ctx.createLinearGradient(frame.x, frame.y, frame.x + frame.w, frame.y + frame.h);
+      gradient.addColorStop(0, '#34303a'); gradient.addColorStop(1, '#24242c');
+      ctx.fillStyle = gradient; ctx.fillRect(frame.x, frame.y, frame.w, frame.h);
+      ctx.fillStyle = 'rgba(245,226,206,.12)';
+      ctx.font = `700 ${Math.min(frame.w, frame.h) * .11}px system-ui`;
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText(String(frame.index + 1).padStart(2, '0'), frame.x + frame.w / 2, frame.y + frame.h / 2);
+    } else {
+      const img = item.image;
+      const base = Math.max(frame.w / img.naturalWidth, frame.h / img.naturalHeight);
+      const scale = base * (item.zoom || 1);
+      const dw = img.naturalWidth * scale, dh = img.naturalHeight * scale;
+      const cx = frame.x + frame.w / 2 + (item.panX || 0) * frame.w;
+      const cy = frame.y + frame.h / 2 + (item.panY || 0) * frame.h;
+      ctx.filter = grade.filter;
+      ctx.drawImage(img, cx - dw / 2, cy - dh / 2, dw, dh);
+      ctx.filter = 'none';
     }
-    const image=photo.image!==undefined?photo.image:photo;
-    const iw=image.naturalWidth||image.width, ih=image.naturalHeight||image.height;
-    const scale=Math.max(rect.w/iw,rect.h/ih)*(crop.zoom||1), dw=iw*scale, dh=ih*scale;
-    const cx=rect.x+rect.w/2+(crop.x||0)*rect.w, cy=rect.y+rect.h/2+(crop.y||0)*rect.h;
-    ctx.save();ctx.beginPath();ctx.rect(rect.x,rect.y,rect.w,rect.h);ctx.clip();ctx.filter=grade.filter;
-    ctx.drawImage(image,cx-dw/2,cy-dh/2,dw,dh);ctx.filter='none';
-    const tint=ctx.createLinearGradient(0,rect.y,0,rect.y+rect.h);tint.addColorStop(0,grade.top);tint.addColorStop(.48,'#f15e7a12');tint.addColorStop(1,grade.bottom);ctx.fillStyle=tint;ctx.fillRect(rect.x,rect.y,rect.w,rect.h);
+    const shade = ctx.createLinearGradient(0, frame.y, 0, frame.y + frame.h);
+    shade.addColorStop(0, grade.top); shade.addColorStop(.48, 'rgba(8,8,18,0)'); shade.addColorStop(1, grade.bottom);
+    ctx.fillStyle = shade; ctx.fillRect(frame.x, frame.y, frame.w, frame.h);
     ctx.restore();
   }
-  function drawCaption(ctx,caption,w,h,color) {
-    const words=(caption||'').trim().toUpperCase(); if(!words)return;
-    ctx.save();ctx.textAlign='center';ctx.textBaseline='middle';ctx.lineJoin='round';
-    let size=Math.min(h*.19,w*.14);ctx.font=`${size}px Anton, Impact, sans-serif`;
-    while(ctx.measureText(words).width>w*.84&&size>18){size-=2;ctx.font=`${size}px Anton, Impact, sans-serif`;}
-    const y=h*.77;ctx.shadowColor='#130d1bdd';ctx.shadowBlur=size*.22;ctx.shadowOffsetY=size*.065;
-    ctx.lineWidth=Math.max(3,size*.045);ctx.strokeStyle='#19121be8';ctx.strokeText(words,w/2,y,w*.88);
-    ctx.shadowBlur=0;ctx.shadowOffsetY=0;
-    const grad=ctx.createLinearGradient(0,y-size/2,0,y+size/2);grad.addColorStop(0,'#fff9e8');grad.addColorStop(.46,color);grad.addColorStop(1,color);
-    ctx.fillStyle=grad;ctx.fillText(words,w/2,y,w*.88);
-    ctx.font='700 '+Math.max(10,size*.105)+'px system-ui';ctx.letterSpacing='0.34em';ctx.fillStyle='#fff4dbd9';ctx.fillText('A NIGHT IN THE CITY',w/2,h*.875,w*.8);
+  function drawTitle(ctx, width, height, caption, ink, grade) {
+    if (!caption || !caption.trim()) return;
+    const text = caption.trim().toLocaleUpperCase();
+    const pad = width * .055, maxWidth = width - pad * 2;
+    let size = Math.min(height * .115, width * .12);
+    ctx.save();
+    ctx.font = `400 ${size}px Anton, Impact, sans-serif`;
+    while (ctx.measureText(text).width > maxWidth && size > 22) {
+      size -= Math.max(1, size * .035);
+      ctx.font = `400 ${size}px Anton, Impact, sans-serif`;
+    }
+    const baseline = height * .885;
+    const band = ctx.createLinearGradient(0, baseline - size * 1.45, 0, height);
+    band.addColorStop(0, 'rgba(12,10,19,0)'); band.addColorStop(1, `rgba(12,10,19,${grade.shade + .4})`);
+    ctx.fillStyle = band; ctx.fillRect(0, baseline - size * 1.45, width, height - baseline + size * 1.45);
+    ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic'; ctx.lineJoin = 'round';
+    ctx.shadowColor = 'rgba(15,8,18,.72)'; ctx.shadowBlur = size * .16; ctx.shadowOffsetY = size * .075;
+    ctx.strokeStyle = '#281b20'; ctx.lineWidth = Math.max(3, size * .075); ctx.strokeText(text, width / 2, baseline, maxWidth);
+    ctx.shadowBlur = 0; ctx.shadowOffsetY = 0;
+    ctx.fillStyle = ink || '#fff4dc'; ctx.fillText(text, width / 2, baseline, maxWidth);
     ctx.restore();
   }
-  function drawCover(canvas,state) {
-    const ctx=canvas.getContext('2d'),w=canvas.width,h=canvas.height,grade=GRADES[state.grade]||GRADES.vice,panels=panelRects(w,h,state.layout);
-    ctx.fillStyle='#171722';ctx.fillRect(0,0,w,h);
-    const gap=Math.max(5,Math.round(w*.009));
-    panels.forEach((r,i)=>{const photo=state.panels[i]&&state.photos[state.panels[i].photo];drawPhoto(ctx,photo,{x:r.x+gap/2,y:r.y+gap/2,w:r.w-gap,h:r.h-gap},state.panels[i]||{zoom:1},grade);});
-    // Deliberate irregular hairline dividers and a restrained frame unify the photo mosaic.
-    ctx.strokeStyle='#17151bf0';ctx.lineWidth=gap;panels.forEach(r=>ctx.strokeRect(r.x,r.y,r.w,r.h));
-    const edge=ctx.createLinearGradient(0,0,0,h);edge.addColorStop(0,'#11131a22');edge.addColorStop(.58,'#11131a08');edge.addColorStop(1,'#14101cbb');ctx.fillStyle=edge;ctx.fillRect(0,0,w,h);
-    ctx.strokeStyle='#f9d5a65c';ctx.lineWidth=Math.max(2,w*.002);ctx.strokeRect(w*.018,h*.018,w*.964,h*.964);
-    // Small original edition mark in the upper-left panel.
-    ctx.save();ctx.fillStyle='#16141bcc';ctx.fillRect(w*.056,h*.065,w*.19,h*.06);ctx.fillStyle='#f8ecda';ctx.font=`${Math.max(12,w*.018)}px Anton, sans-serif`;ctx.textAlign='left';ctx.textBaseline='middle';ctx.fillText('FRAME / CITY',w*.07,h*.095);ctx.restore();
-    drawCaption(ctx,state.caption,w,h,state.captionColor);
+  function render(canvas, state, options) {
+    const format = layouts[options.format] ? options.format : 'square';
+    const size = layouts[format];
+    if (canvas.width !== size.w || canvas.height !== size.h) { canvas.width = size.w; canvas.height = size.h; }
+    const ctx = canvas.getContext('2d');
+    const grade = grades[options.grade] || grades.vice;
+    ctx.fillStyle = '#16151d'; ctx.fillRect(0, 0, size.w, size.h);
+    const frames = rectangles(size.w, size.h);
+    frames.forEach((rect, index) => drawImageCover(ctx, Object.assign({ index }, rect), state[index], grade));
+    if (options.selected >= 0 && options.outline) {
+      const r = frames[options.selected];
+      ctx.save(); ctx.strokeStyle = '#fff3d8'; ctx.lineWidth = Math.max(2, size.w / 540);
+      ctx.strokeRect(r.x + 1, r.y + 1, r.w - 2, r.h - 2); ctx.restore();
+    }
+    drawTitle(ctx, size.w, size.h, options.caption, options.ink, grade);
   }
-  window.CoverArt={PANEL_LAYOUTS,GRADES,panelRects,drawCover};
-})();
+  function frameAt(canvas, x, y) {
+    const rect = canvas.getBoundingClientRect();
+    const px = (x - rect.left) * canvas.width / rect.width;
+    const py = (y - rect.top) * canvas.height / rect.height;
+    return rectangles(canvas.width, canvas.height).findIndex((r) => px >= r.x && px <= r.x + r.w && py >= r.y && py <= r.y + r.h);
+  }
+  window.CoverArt = { render, frameAt, layouts };
+}());
