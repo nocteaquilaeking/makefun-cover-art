@@ -17,23 +17,28 @@
     <div class="workspace">
       <aside class="sidebar" aria-label="Cover settings">
         <div class="intro"><span class="eyebrow">POSTER LAB <i>01 / 04</i></span><h1>Make a<br><em>moment.</em></h1><p>Build a city story, one frame at a time.</p></div>
-        <section class="tool-section photo-section"><div class="section-heading"><span class="step">01</span><div><h2>Your photos</h2><p>Choose a frame, then add a photo.</p></div></div>
+        <section class="tool-section photo-section">
+          <div class="section-heading"><span class="step">01</span><div><h2>Your photos</h2><p>Choose a frame, then add a photo.</p></div></div>
           <div class="photo-actions"><label class="button button-upload" for="photo"><span>＋</span> Upload photos</label><input id="photo" type="file" accept="image/*" multiple><button class="button button-quiet" id="fill-all" type="button">Fill all</button></div>
           <div class="sample-row"><span>TRY A DEMO</span><button type="button" class="sample-chip" data-sample="pier"><span class="sample-thumb thumb-pier"></span>Pier</button><button type="button" class="sample-chip" data-sample="boulevard"><span class="sample-thumb thumb-boulevard"></span>Boulevard</button></div>
           <div class="photo-library" id="photo-library" aria-live="polite"><span class="empty-library">Your photos will appear here.</span></div>
         </section>
-        <section class="tool-section"><div class="section-heading"><span class="step">02</span><div><h2>Frame & crop</h2><p><span id="selected-label">Frame 01</span> selected · drag to reframe</p></div></div>
+        <section class="tool-section">
+          <div class="section-heading"><span class="step">02</span><div><h2>Frame &amp; crop</h2><p><span id="selected-label">Frame 01</span> selected · drag to reframe</p></div></div>
           <label class="range-label" for="zoom">Zoom <output id="zoom-value">1.0×</output></label><input id="zoom" class="range" type="range" min="1" max="2.5" step="0.01" value="1"><div class="frame-strip" id="frame-strip" aria-label="Choose a cover frame"></div>
         </section>
-        <section class="tool-section caption-section"><div class="section-heading"><span class="step">03</span><div><h2>Cover line</h2><p>Give the story a name.</p></div></div>
+        <section class="tool-section caption-section">
+          <div class="section-heading"><span class="step">03</span><div><h2>Cover line</h2><p>Give the story a name.</p></div></div>
           <label class="sr-only" for="caption">Cover caption</label><input id="caption" class="caption-input" type="text" maxlength="34" value="CITY OF GOLD" autocomplete="off">
           <div class="caption-options"><span>INK</span><button class="swatch active" type="button" data-ink="#fff4dc" aria-label="Warm ivory caption"></button><button class="swatch" type="button" data-ink="#ffcf61" aria-label="Sunshine yellow caption"></button><button class="swatch" type="button" data-ink="#ff6e91" aria-label="Coral caption"></button><button class="swatch" type="button" data-ink="#8bf0e2" aria-label="Seafoam caption"></button></div>
         </section>
-        <section class="tool-section grade-section"><div class="section-heading"><span class="step">04</span><div><h2>Colour story</h2><p>Set the mood of the city.</p></div></div>
+        <section class="tool-section grade-section">
+          <div class="section-heading"><span class="step">04</span><div><h2>Colour story</h2><p>Set the mood of the city.</p></div></div>
           <div class="grade-options" role="group" aria-label="Choose a colour grade"><button class="grade-card selected" data-grade="vice" type="button"><span class="grade-preview grade-vice"></span><span>Vice Sunset</span><i>SELECTED</i></button><button class="grade-card" data-grade="neon" type="button"><span class="grade-preview grade-neon"></span><span>Neon Night</span></button><button class="grade-card" data-grade="clean" type="button"><span class="grade-preview grade-clean"></span><span>Clean Poster</span></button></div>
         </section>
       </aside>
-      <section class="preview-area" aria-label="Cover preview"><div class="preview-toolbar"><div><span class="preview-kicker">LIVE CANVAS</span><span class="preview-title">Your cover</span></div><label class="size-picker">FORMAT <select id="format" aria-label="Export format"><option value="square">Square · 1080 × 1080</option><option value="portrait">Portrait · 1080 × 1350</option><option value="landscape">Landscape · 1920 × 1080</option></select></label></div>
+      <section class="preview-area" aria-label="Cover preview">
+        <div class="preview-toolbar"><div><span class="preview-kicker">LIVE CANVAS</span><span class="preview-title">Your cover</span></div><label class="size-picker">FORMAT <select id="format" aria-label="Export format"><option value="square">Square · 1080 × 1080</option><option value="portrait">Portrait · 1080 × 1350</option><option value="landscape">Landscape · 1920 × 1080</option></select></label></div>
         <div class="canvas-stage"><canvas id="cover" width="1080" height="1080" aria-label="Your multi-frame cover. Select a frame to crop it."></canvas><div class="canvas-hint"><span>↖</span> Select a frame to crop</div></div>
         <footer class="preview-footer"><span><b class="footer-dot"></b> AUTOSAVED IN THIS BROWSER</span><span id="status" role="status">Ready when you are</span><span>MADE OF YOUR MOMENTS <b>✳</b></span></footer>
       </section>

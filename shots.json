@@ -1,7 +1,28 @@
 {
   "shots": [
-    { "file": "1-cover.jpg", "scene": "A square pier-at-dusk cover titled Sunset Heist.", "query": "?shot=cover&photo=pier&caption=Sunset%20Heist", "width": 1080, "height": 1080 },
-    { "file": "2-editor.jpg", "scene": "The full editor with a boulevard frame and the Boulevard Queen title.", "query": "?shot=editor&photo=boulevard&caption=Boulevard%20Queen", "width": 1280, "height": 720 },
-    { "file": "3-cover.jpg", "scene": "A second square cover variation featuring the boulevard scene.", "query": "?shot=cover&photo=boulevard&caption=Boulevard%20Queen", "width": 1080, "height": 1080 }
+    {
+      "file": "1-cover.jpg",
+      "description": "A square pier scene finished as a Sunset Heist cover.",
+      "scene": "A square pier-at-dusk cover titled Sunset Heist.",
+      "query": "?shot=cover&photo=pier&caption=Sunset%20Heist",
+      "width": 1080,
+      "height": 1080
+    },
+    {
+      "file": "2-editor.jpg",
+      "description": "The full studio with the Boulevard Queen image arrangement.",
+      "scene": "The full editor with a boulevard frame and the Boulevard Queen title.",
+      "query": "?shot=editor&photo=boulevard&caption=Boulevard%20Queen",
+      "width": 1280,
+      "height": 720
+    },
+    {
+      "file": "3-cover.jpg",
+      "description": "A second square cover built around the boulevard photograph.",
+      "scene": "A second square cover variation featuring the boulevard scene.",
+      "query": "?shot=cover&photo=boulevard&caption=Boulevard%20Queen",
+      "width": 1080,
+      "height": 1080
+    }
   ]
 }

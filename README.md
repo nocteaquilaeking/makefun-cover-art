@@ -4,12 +4,14 @@
 [![rank](https://make.fun/badge/gta6-cover-art-01/nocteaquilaeking/makefun-cover-art/rank.svg)](https://make.fun/bounty/gta6-cover-art-01/leaderboard?utm_source=github&utm_medium=readme&utm_campaign=gta6-cover-art-01)
 [![reward](https://make.fun/badge/gta6-cover-art-01/nocteaquilaeking/makefun-cover-art/reward.svg)](https://make.fun/bounty/gta6-cover-art-01/leaderboard?utm_source=github&utm_medium=readme&utm_campaign=gta6-cover-art-01)
 
-Afterglow is an offline GTA-inspired cover maker. Add your own photos or use the bundled pier and boulevard scenes, arrange them in a nine-panel grid, then tune the title, colour grade, crop, and format before exporting a PNG. Anton is bundled locally for the cover lettering.
+Afterglow Cover Studio is an offline poster editor inspired by sunlit city stories. Use your own images or the bundled pier and boulevard photographs, arrange them across nine panels, adjust the crop and colour grade, add a cover line, and save the canvas as a PNG. The Anton typeface is included in the app.
 
-## Run it
+## Open the app
 
-Open `app/index.html` directly in a browser, or serve the `app/` directory with a static file server. No build step or network access is needed for editing.
+Open `app/index.html` in a browser, or serve the `app/` folder with any static web server. Editing runs locally and needs no build step.
 
-## Screenshots and entry
+## Captured views
 
-The three files in `screenshots/` are captured from the app using the deterministic scenes in `shots.json`: a pier cover, the boulevard editor, and another boulevard cover. The harness in `app/src/shots.js` loads the selected bundled sample and caption for each `?shot=` URL. Run `main.ts` with Node to copy the app and screenshots into `MAKEFUN_OUTPUT_DIR` and generate `dossier.json`.
+The screenshot runner uses the URLs listed in `shots.json` to set up a pier cover, a boulevard editor view, and a second boulevard cover. `app/src/shots.js` loads the bundled image, applies the requested title, waits for the local font, and signals when each scene is ready. The existing captures are stored in `screenshots/`.
+
+To assemble an entry, run `MAKEFUN_BOT_DIR=. MAKEFUN_OUTPUT_DIR=/tmp/cover-out node main.ts`. The entrypoint copies the app and captured images and creates `dossier.json` in the selected output directory.
