@@ -1,45 +1,33 @@
-/* Editor state and local photo handling. No image leaves this page. */
+/* Editor state, local image library, drag-to-frame interactions, and PNG export. */
 (function () {
-  const canvas = document.getElementById('cover'), caption = document.getElementById('caption'), color = document.getElementById('captionColor');
-  const status = document.getElementById('status'), zoom = document.getElementById('zoom');
-  const panels = CoverArt.panels.map(() => ({ photo: null, x: 0, y: 0, zoom: 1 }));
-  let selected = 0, look = 'vice', pointer = null;
-  const photos = [];
-  function render(selection) { CoverArt.drawCover(canvas, panels, caption.value, color.value, look, selected, { selection: !!selection }); document.getElementById('selectionLabel').textContent = `PANEL ${String(selected + 1).padStart(2, '0')} / 06`; }
-  function choosePanel(index) { selected = index; zoom.value = panels[selected].zoom; render(true); }
-  function applyPhoto(photo, all) { if (all) panels.forEach((p) => { p.photo = photo; p.x = 0; p.y = 0; p.zoom = 1; }); else { panels[selected].photo = photo; panels[selected].x = 0; panels[selected].y = 0; panels[selected].zoom = 1; } render(!document.body.classList.contains('shot-cover')); }
-  function loadImage(url) { return new Promise((resolve, reject) => { const image = new Image(); image.onload = () => resolve(image); image.onerror = reject; image.src = url; }); }
-  async function loadSample(path) { const photo = await loadImage(path); photos.push(photo); applyPhoto(photo, true); }
-  document.getElementById('photoFiles').addEventListener('change', async (event) => {
-    for (const file of Array.from(event.target.files || [])) {
-      if (!file.type.startsWith('image/')) continue;
-      const localUrl = URL.createObjectURL(file);
-      try { const photo = await loadImage(localUrl); photos.push(photo); applyPhoto(photo, event.shiftKey || panels.every((panel) => !panel.photo)); status.textContent = `${file.name} loaded locally.`; }
-      catch (_) { status.textContent = `Could not read ${file.name}.`; }
-    }
-    event.target.value = '';
-  });
-  document.querySelectorAll('[data-demo]').forEach((button) => button.addEventListener('click', async () => { await loadSample(`./samples/${button.dataset.demo}.jpg`); status.textContent = 'Sample loaded into every panel.'; }));
-  caption.addEventListener('input', () => render(!document.body.classList.contains('shot-cover')));
-  color.addEventListener('input', () => render(!document.body.classList.contains('shot-cover')));
-  zoom.addEventListener('input', () => { panels[selected].zoom = Number(zoom.value); render(true); });
-  document.querySelectorAll('[data-look]').forEach((button) => button.addEventListener('click', () => { look = button.dataset.look; document.querySelectorAll('[data-look]').forEach((item) => item.classList.toggle('active', item === button)); render(!document.body.classList.contains('shot-cover')); }));
-  canvas.addEventListener('pointerdown', (event) => {
-    const rect = canvas.getBoundingClientRect(), x = (event.clientX - rect.left) / rect.width, y = (event.clientY - rect.top) / rect.height;
-    const found = CoverArt.panels.find((panel) => x >= panel.x && x <= panel.x + panel.w && y >= panel.y && y <= panel.y + panel.h);
-    if (!found) return; choosePanel(found.id); canvas.setPointerCapture(event.pointerId); pointer = { x: event.clientX, y: event.clientY };
-  });
-  canvas.addEventListener('pointermove', (event) => { if (!pointer) return; const rect = canvas.getBoundingClientRect(), panel = CoverArt.panels[selected], state = panels[selected]; state.x += (event.clientX - pointer.x) / rect.width / panel.w; state.y += (event.clientY - pointer.y) / rect.height / panel.h; pointer = { x: event.clientX, y: event.clientY }; render(true); });
-  canvas.addEventListener('pointerup', () => { pointer = null; }); canvas.addEventListener('pointercancel', () => { pointer = null; });
-  canvas.addEventListener('wheel', (event) => { event.preventDefault(); panels[selected].zoom = Math.max(1, Math.min(2.6, panels[selected].zoom + (event.deltaY < 0 ? .06 : -.06))); zoom.value = panels[selected].zoom; render(true); }, { passive: false });
-  const formats = { square: [1080, 1080], portrait: [1080, 1350], landscape: [1920, 1080] };
-  document.getElementById('export').addEventListener('click', async () => {
-    await document.fonts.ready;
-    const [width, height] = formats[document.getElementById('format').value], output = document.createElement('canvas'); output.width = width; output.height = height;
-    CoverArt.drawCover(output, panels, caption.value, color.value, look, selected, {});
-    output.toBlob((blob) => { if (!blob) { status.textContent = 'PNG export failed.'; return; } const link = document.createElement('a'); link.href = URL.createObjectURL(blob); link.download = `afterglow-${width}x${height}.png`; link.click(); setTimeout(() => URL.revokeObjectURL(link.href), 1000); status.textContent = `Saved ${width} × ${height} PNG.`; }, 'image/png');
-  });
-  const query = new URLSearchParams(location.search);
-  if (query.has('shot')) runCoverShot(query.get('shot'), query, loadSample, (text) => { caption.value = text; render(false); });
-  else render(true);
+  'use strict';
+  const $=id=>document.getElementById(id);
+  const canvas=$('cover'),ctx=canvas.getContext('2d');
+  const state={photos:[],panels:Array.from({length:8},()=>({photo:-1,x:0,y:0,zoom:1})),selectedPanel:-1,selectedPhoto:-1,caption:'SUNSET HEIST',captionColor:'#fff0cc',grade:'vice',layout:'square'};
+  let drag=null,toastTimer=0;
+  const dims={square:[1080,1080],portrait:[1080,1350],landscape:[1920,1080]};
+  function notice(message){const status=$('status');status.textContent=message;status.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>status.classList.remove('show'),2300);}
+  function repaint(){CoverArt.drawCover(canvas,state);renderPanels();renderPhotos();}
+  function renderPanels(){const picker=$('panelPicker');picker.replaceChildren();const rects=CoverArt.panelRects(600,100,state.layout);rects.forEach((r,i)=>{const tile=document.createElement('button');tile.type='button';tile.className='panel-cell'+(i===state.selectedPanel?' selected':'');tile.setAttribute('aria-label',`Select panel ${i+1}`);const p=state.panels[i],photo=state.photos[p.photo];if(photo)tile.style.backgroundImage=`url("${photo.url}")`;const num=document.createElement('span');num.className='panel-index';num.textContent=String(i+1);tile.append(num);tile.addEventListener('click',()=>{state.selectedPanel=i;$('selectedLabel').textContent=`PANEL ${String(i+1).padStart(2,'0')}`;repaint();});picker.append(tile);});}
+  function renderPhotos(){const tray=$('photoTray');tray.replaceChildren();state.photos.forEach((photo,i)=>{const tile=document.createElement('button');tile.type='button';tile.className='photo-tile'+(i===state.selectedPhoto?' active':'');tile.style.backgroundImage=`url("${photo.url}")`;tile.title=photo.name;const tag=document.createElement('span');tag.textContent=photo.label;tile.append(tag);tile.addEventListener('click',()=>{state.selectedPhoto=i;renderPhotos();});tray.append(tile);});}
+  function assign(index){if(state.selectedPhoto<0)return notice('Choose or add a photo first.');if(index<0){state.panels.forEach((p,i)=>state.panels[i]={photo:state.selectedPhoto,x:0,y:0,zoom:1});notice('Photo filled across all panels.');}else{state.panels[index]={photo:state.selectedPhoto,x:0,y:0,zoom:1};notice(`Photo placed in panel ${index+1}.`);}repaint();}
+  function loadImageSource(src,name,label){return new Promise((resolve,reject)=>{const img=new Image();img.onload=()=>{state.photos.push({image:img,url:src,name,label});state.selectedPhoto=state.photos.length-1;state.panels.forEach((p,i)=>{if(p.photo<0)state.panels[i]={photo:state.selectedPhoto,x:0,y:0,zoom:1};});repaint();resolve(img);};img.onerror=reject;img.src=src;});}
+  async function addFiles(files){for(const file of files){if(!file.type.startsWith('image/'))continue;const url=URL.createObjectURL(file);try{await loadImageSource(url,file.name,(file.name.split('.')[0]||'PHOTO').slice(0,8).toUpperCase());}catch{URL.revokeObjectURL(url);notice('That image could not be opened.');}}if(files.length)notice('Photo loaded locally. Select a panel to reframe it.');}
+  function setLayout(name){state.layout=name;const [w,h]=dims[name];canvas.width=w;canvas.height=h;$('stageSize').textContent=`${w} × ${h}`;$('workspace').style.setProperty('--ratio',String(w/h));$('size').value=name;document.querySelector('.canvas-wrap').className=`canvas-wrap ${name==='square'?'':name}`;repaint();}
+  function download(){document.fonts.ready.then(()=>{const a=document.createElement('a');a.download=`frame-city-${canvas.width}x${canvas.height}.png`;a.href=canvas.toDataURL('image/png');a.click();notice(`PNG saved · ${canvas.width} × ${canvas.height}`);});}
+  $('photo').addEventListener('change',e=>{addFiles(Array.from(e.target.files||[]));e.target.value='';});
+  $('caption').addEventListener('input',e=>{state.caption=e.target.value;$('captionCount').textContent=`${e.target.value.length}/34`;repaint();});
+  $('size').addEventListener('change',e=>setLayout(e.target.value));
+  $('fillAll').addEventListener('click',()=>assign(-1));$('assignPhoto').addEventListener('click',()=>assign(state.selectedPanel<0?0:state.selectedPanel));
+  $('swatches').addEventListener('click',e=>{const b=e.target.closest('.swatch');if(!b)return;document.querySelectorAll('.swatch').forEach(x=>x.classList.toggle('active',x===b));state.captionColor=b.dataset.color;repaint();});
+  $('grades').addEventListener('click',e=>{const b=e.target.closest('.grade-card');if(!b)return;state.grade=b.dataset.grade;document.querySelectorAll('.grade-card').forEach(x=>x.classList.toggle('selected',x===b));repaint();});
+  document.querySelectorAll('[data-sample]').forEach(button=>button.addEventListener('click',async()=>{const sample=button.dataset.sample;if(state.photos.some(p=>p.name===sample)) {state.selectedPhoto=state.photos.findIndex(p=>p.name===sample);state.panels.forEach((p,i)=>state.panels[i]={photo:state.selectedPhoto,x:0,y:0,zoom:1});repaint();return;}await loadImageSource(`./samples/${sample}.jpg`,sample,sample.toUpperCase());state.panels.forEach((p,i)=>state.panels[i]={photo:state.selectedPhoto,x:0,y:0,zoom:1});repaint();notice(`${sample} loaded into all panels.`);}));
+  $('export').addEventListener('click',download);$('exportTop').addEventListener('click',download);
+  function point(e){const b=canvas.getBoundingClientRect();return{x:(e.clientX-b.left)*canvas.width/b.width,y:(e.clientY-b.top)*canvas.height/b.height};}
+  canvas.addEventListener('pointerdown',e=>{const p=point(e),rects=CoverArt.panelRects(canvas.width,canvas.height,state.layout);const i=rects.findIndex(r=>p.x>=r.x&&p.x<=r.x+r.w&&p.y>=r.y&&p.y<=r.y+r.h);if(i<0)return;state.selectedPanel=i;$('selectedLabel').textContent=`PANEL ${String(i+1).padStart(2,'0')}`;drag={id:i,last:p};canvas.setPointerCapture(e.pointerId);repaint();});
+  canvas.addEventListener('pointermove',e=>{if(!drag)return;const now=point(e),r=CoverArt.panelRects(canvas.width,canvas.height,state.layout)[drag.id],panel=state.panels[drag.id];panel.x=Math.max(-.9,Math.min(.9,panel.x+(now.x-drag.last.x)/r.w));panel.y=Math.max(-.9,Math.min(.9,panel.y+(now.y-drag.last.y)/r.h));drag.last=now;repaint();});
+  canvas.addEventListener('pointerup',()=>drag=null);canvas.addEventListener('pointercancel',()=>drag=null);
+  canvas.addEventListener('wheel',e=>{const p=point(e),rects=CoverArt.panelRects(canvas.width,canvas.height,state.layout),i=rects.findIndex(r=>p.x>=r.x&&p.x<=r.x+r.w&&p.y>=r.y&&p.y<=r.y+r.h);if(i<0)return;e.preventDefault();state.panels[i].zoom=Math.max(1,Math.min(3,state.panels[i].zoom+(e.deltaY<0?.08:-.08)));state.selectedPanel=i;$('selectedLabel').textContent=`PANEL ${String(i+1).padStart(2,'0')}`;repaint();},{passive:false});
+  window.EditorApp={state,loadImageSource,repaint,setLayout,notice,ready:Promise.resolve()};
+  repaint();
 })();
