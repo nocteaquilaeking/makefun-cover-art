@@ -1,56 +1,87 @@
-// Assemble the static studio and its captured views for make.fun.
+// Package the offline studio and its recorded browser captures.
 import { cpSync, existsSync, mkdirSync, readFileSync, readdirSync, statSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { buildDossier } from './vendor/makefun-app.ts';
 
-const projectRoot = fileURLToPath(new URL('.', import.meta.url));
-const destination = process.env.MAKEFUN_OUTPUT_DIR || '/output';
-const sourceApp = join(projectRoot, 'app');
-const sourceShots = join(projectRoot, 'screenshots');
+const root = fileURLToPath(new URL('.', import.meta.url));
+const output = process.env.MAKEFUN_OUTPUT_DIR || '/output';
+const appSource = join(root, 'app');
+const shotSource = join(root, 'screenshots');
 
-function listCaptureNames(folder: string): string[] {
-  if (!existsSync(folder) || !statSync(folder).isDirectory()) return [];
-  return readdirSync(folder).filter((name) => !name.startsWith('.'));
+function visibleNames(directory: string): string[] {
+  if (!existsSync(directory) || !statSync(directory).isDirectory()) return [];
+  return readdirSync(directory).filter((name) => !name.startsWith('.'));
 }
 
-function createEntry(): void {
-  const requiredPage = join(sourceApp, 'index.html');
-  if (!existsSync(requiredPage) || !statSync(requiredPage).isFile()) {
-    throw new Error(`Cannot build entry: required app page is missing from ${sourceApp}`);
+function countFiles(directory: string): number {
+  let count = 0;
+  for (const name of readdirSync(directory)) {
+    const path = join(directory, name);
+    const entry = statSync(path);
+    if (entry.isDirectory()) count += countFiles(path);
+    else if (entry.isFile()) count++;
+  }
+  return count;
+}
+
+function recordedAppFileCount(dossier: unknown, dossierPath: string): number {
+  if (dossier === null || typeof dossier !== 'object' || !('text' in dossier) || typeof dossier.text !== 'string') {
+    throw new Error(`Dossier has no app summary text: ${dossierPath}`);
+  }
+  const source = /^Source files: (\d+) \(/m.exec(dossier.text);
+  const vendored = /^Vendored files: (\d+) \(/m.exec(dossier.text);
+  const assets = /^Assets: (.*)$/m.exec(dossier.text);
+  if (!source || !vendored || !assets) throw new Error(`Dossier app file counts are missing or invalid: ${dossierPath}`);
+  const assetFiles = assets[1] === 'none'
+    ? 0
+    : [...assets[1].matchAll(/(?:^|, )[^,]+? (\d+) \(\d+ bytes\)/g)]
+      .reduce((total, match) => total + Number(match[1]), 0);
+  return Number(source[1]) + Number(vendored[1]) + assetFiles;
+}
+
+function buildEntry(): void {
+  const page = join(appSource, 'index.html');
+  if (!existsSync(page) || !statSync(page).isFile()) {
+    throw new Error(`Missing required studio page: ${page}`);
   }
 
-  const captures = listCaptureNames(sourceShots);
-  const includesJpeg = captures.some((name) => name.toLowerCase().endsWith('.jpg'));
-  if (!captures.length || !includesJpeg) {
-    throw new Error(`Cannot build entry: ${sourceShots} must exist, contain files, and include at least one .jpg file`);
+  const captures = visibleNames(shotSource);
+  if (!captures.length || !captures.some((name) => name.toLowerCase().endsWith('.jpg'))) {
+    throw new Error(`Screenshots at ${shotSource} must include files and at least one .jpg`);
   }
 
-  mkdirSync(destination, { recursive: true });
-  cpSync(sourceApp, join(destination, 'app'), { recursive: true });
-  mkdirSync(join(destination, 'screenshots'), { recursive: true });
-  cpSync(sourceShots, join(destination, 'screenshots'), { recursive: true });
+  mkdirSync(output, { recursive: true });
+  cpSync(appSource, join(output, 'app'), { recursive: true });
+  mkdirSync(join(output, 'screenshots'), { recursive: true });
+  cpSync(shotSource, join(output, 'screenshots'), { recursive: true });
 
-  const dossierFile = join(destination, 'dossier.json');
-  const contents = buildDossier(destination, {
+  const dossierPath = join(output, 'dossier.json');
+  const dossier = buildDossier(output, {
     text_max_bytes: 163840,
     screenshots: { max: 4, max_bytes: 262144 },
     app_max_files: 993,
     app_max_bytes: 50331648,
     app_path_max_bytes: 1000
   });
-  writeFileSync(dossierFile, contents);
+  writeFileSync(dossierPath, dossier);
 
-  let parsedDossier: unknown;
+  const written = readFileSync(dossierPath, 'utf8');
+  if (!written.length) throw new Error(`Dossier is empty: ${dossierPath}`);
+  let parsed: unknown;
   try {
-    parsedDossier = JSON.parse(readFileSync(dossierFile, 'utf8'));
+    parsed = JSON.parse(written);
   } catch (error) {
-    const detail = error instanceof Error ? error.message : String(error);
-    throw new Error(`Dossier could not be read as valid JSON at ${dossierFile}: ${detail}`);
+    const message = error instanceof Error ? error.message : String(error);
+    throw new Error(`Dossier is not valid JSON (${dossierPath}): ${message}`);
   }
-  if (parsedDossier === null || typeof parsedDossier !== 'object') {
-    throw new Error(`Dossier did not contain a JSON object: ${dossierFile}`);
+  if (parsed === null || typeof parsed !== 'object') throw new Error(`Dossier is not a JSON object: ${dossierPath}`);
+
+  const recordedCount = recordedAppFileCount(parsed, dossierPath);
+  const copiedCount = countFiles(join(output, 'app'));
+  if (recordedCount !== copiedCount) {
+    throw new Error(`Dossier app file count mismatch: recorded ${recordedCount}, copied ${copiedCount} (${dossierPath})`);
   }
 }
 
-createEntry();
+buildEntry();

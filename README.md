@@ -4,14 +4,14 @@
 [![rank](https://make.fun/badge/gta6-cover-art-01/nocteaquilaeking/makefun-cover-art/rank.svg)](https://make.fun/bounty/gta6-cover-art-01/leaderboard?utm_source=github&utm_medium=readme&utm_campaign=gta6-cover-art-01)
 [![reward](https://make.fun/badge/gta6-cover-art-01/nocteaquilaeking/makefun-cover-art/reward.svg)](https://make.fun/bounty/gta6-cover-art-01/leaderboard?utm_source=github&utm_medium=readme&utm_campaign=gta6-cover-art-01)
 
-Afterglow Cover Studio is an offline poster editor for assembling a nine-frame, Vice-inspired cover. Choose the included pier or boulevard photograph, upload your own pictures, reframe each panel, tune the colour grade and title, then export a PNG. The Anton font is bundled locally.
+Afterglow Cover Studio is a self-contained poster editor for assembling a nine-frame, Vice-inspired cover. Load the bundled pier or boulevard scene, add your own images, crop each panel, adjust the colour grade and title, and save a PNG. The Anton typeface is included locally.
 
-## Run it
+## Run the studio
 
-Open `app/index.html` in a browser, or serve the `app/` directory with a static web server. No build step or network connection is needed for editing.
+Open `app/index.html` in a browser, or serve the `app/` folder with any static web server. Editing works without a build step or network connection.
 
-## Screenshots and packaging
+## Capture and package
 
-`shots.json` describes the three browser scenes: a pier cover, the editor with a boulevard image, and another boulevard cover. The capture page reads each query string and `app/src/shots.js` loads the chosen photo, applies the title, waits for fonts and painting, and sets `window.__shotReady` for the screenshot runner. Captures use the filenames in `screenshots/`.
+`shots.json` describes three scenes: a pier cover, the editor with the boulevard image, and a second boulevard cover. The capture harness in `app/src/shots.js` reads each query, loads its sample and caption, waits for fonts and painting, then sets `window.__shotReady`. The screenshot runner stores the named captures in `screenshots/`.
 
-Run `MAKEFUN_BOT_DIR=. MAKEFUN_OUTPUT_DIR=/tmp/cover-out node main.ts` to copy the app and screenshot directory and create `dossier.json` in the output folder.
+Run `MAKEFUN_BOT_DIR=. MAKEFUN_OUTPUT_DIR=/tmp/cover-out node main.ts` to copy the app and screenshots and produce a `dossier.json` file in the output directory.
