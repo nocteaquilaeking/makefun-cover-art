@@ -15,7 +15,7 @@
     const title=Array.from(caption).length>CAPTION_LIMIT?Array.from(caption).slice(0,CAPTION_LIMIT).join('')+'…':caption;
     if(title){ctx.save();ctx.textAlign='center';ctx.textBaseline='middle';ctx.font='150px Anton, Impact, sans-serif';let font=150;while(ctx.measureText(title).width>1020&&font>48){font-=3;ctx.font=`${font}px Anton, Impact, sans-serif`;}ctx.lineJoin='round';ctx.strokeStyle='rgba(12,12,14,.78)';ctx.lineWidth=14;ctx.strokeText(title,540,920,1020);ctx.fillStyle=state.ink;ctx.shadowColor='rgba(0,0,0,.55)';ctx.shadowBlur=12;ctx.shadowOffsetY=5;ctx.fillText(title,540,920,1020);ctx.restore();}
     ctx.save();ctx.globalCompositeOperation='source-over';ctx.fillStyle=grade.overlay;ctx.fillRect(0,0,size,size);ctx.globalCompositeOperation='screen';ctx.fillStyle=grade.screen;ctx.fillRect(0,0,size,size);ctx.restore();
-    if(state.onFrame){ctx.save();ctx.strokeStyle='#c9f27a';ctx.lineWidth=5;const col=state.selected%3,row=Math.floor(state.selected/3);ctx.strokeRect(col*(cell+gap)+3,row*(cell+gap)+3,cell-6,cell-6);ctx.restore();}
+    if(state.onFrame&&!document.body.classList.contains('shot-cover')){ctx.save();ctx.strokeStyle='#c9f27a';ctx.lineWidth=5;const col=state.selected%3,row=Math.floor(state.selected/3);ctx.strokeRect(col*(cell+gap)+3,row*(cell+gap)+3,cell-6,cell-6);ctx.restore();}
   }
   function exportPng(){return new Promise(resolve=>canvas.toBlob(resolve,'image/png'));}
   window.CoverRender={render,exportPng,canvas};
