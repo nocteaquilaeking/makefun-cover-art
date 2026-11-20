@@ -3,50 +3,40 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#111117">
-  <meta name="description" content="Afterglow Cover Studio — design your own GTA-style cover art offline.">
+  <meta name="description" content="Afterglow Cover Studio turns photographs into bold, colorful square cover art in your browser.">
   <title>Afterglow Cover Studio</title>
-  <link rel="stylesheet" href="./style.css">
+  <link rel="stylesheet" href="style.css">
+  <script defer src="src/palette.js"></script>
+  <script defer src="src/render.js"></script>
+  <script defer src="src/studio.js"></script>
+  <script defer src="src/shots.js"></script>
 </head>
 <body>
-  <main class="studio">
-    <header class="topbar">
-      <a class="brand" href="#" aria-label="Afterglow Cover Studio home"><span class="brand-mark">A</span><span>AFTERGLOW <small>COVER STUDIO</small></span></a>
-      <div class="top-note"><span class="live-dot"></span> YOUR CITY. YOUR STORY.</div>
-      <button class="button button-export" id="export" type="button"><span>↓</span> Export PNG</button>
-    </header>
-    <div class="workspace">
-      <aside class="sidebar" aria-label="Cover settings">
-        <div class="intro"><span class="eyebrow">POSTER LAB <i>01 / 04</i></span><h1>Make a<br><em>moment.</em></h1><p>Build a city story, one frame at a time.</p></div>
-        <section class="tool-section photo-section">
-          <div class="section-heading"><span class="step">01</span><div><h2>Your photos</h2><p>Choose a frame, then add a photo.</p></div></div>
-          <div class="photo-actions"><label class="button button-upload" for="photo"><span>＋</span> Upload photos</label><input id="photo" type="file" accept="image/*" multiple><button class="button button-quiet" id="fill-all" type="button">Fill all</button></div>
-          <div class="sample-row"><span>TRY A DEMO</span><button type="button" class="sample-chip" data-sample="pier"><span class="sample-thumb thumb-pier"></span>Pier</button><button type="button" class="sample-chip" data-sample="boulevard"><span class="sample-thumb thumb-boulevard"></span>Boulevard</button></div>
-          <div class="photo-library" id="photo-library" aria-live="polite"><span class="empty-library">Your photos will appear here.</span></div>
-        </section>
-        <section class="tool-section">
-          <div class="section-heading"><span class="step">02</span><div><h2>Frame &amp; crop</h2><p><span id="selected-label">Frame 01</span> selected · drag to reframe</p></div></div>
-          <label class="range-label" for="zoom">Zoom <output id="zoom-value">1.0×</output></label><input id="zoom" class="range" type="range" min="1" max="2.5" step="0.01" value="1"><div class="frame-strip" id="frame-strip" aria-label="Choose a cover frame"></div>
-        </section>
-        <section class="tool-section caption-section">
-          <div class="section-heading"><span class="step">03</span><div><h2>Cover line</h2><p>Give the story a name.</p></div></div>
-          <label class="sr-only" for="caption">Cover caption</label><input id="caption" class="caption-input" maxlength="34" type="text" value="CITY OF GOLD" autocomplete="off">
-          <div class="caption-options"><span>INK</span><button class="swatch active" type="button" data-ink="#fff4dc" aria-label="Warm ivory caption"></button><button class="swatch" type="button" data-ink="#ffcf61" aria-label="Sunshine yellow caption"></button><button class="swatch" type="button" data-ink="#ff6e91" aria-label="Coral caption"></button><button class="swatch" type="button" data-ink="#8bf0e2" aria-label="Seafoam caption"></button></div>
-        </section>
-        <section class="tool-section grade-section">
-          <div class="section-heading"><span class="step">04</span><div><h2>Colour story</h2><p>Set the mood of the city.</p></div></div>
-          <div class="grade-options" role="group" aria-label="Choose a colour grade"><button class="grade-card selected" data-grade="vice" type="button"><span class="grade-preview grade-vice"></span><span>Vice Sunset</span><i>SELECTED</i></button><button class="grade-card" data-grade="neon" type="button"><span class="grade-preview grade-neon"></span><span>Neon Night</span></button><button class="grade-card" data-grade="clean" type="button"><span class="grade-preview grade-clean"></span><span>Clean Poster</span></button></div>
-        </section>
-      </aside>
-      <section class="preview-area" aria-label="Cover preview">
-        <div class="preview-toolbar"><div><span class="preview-kicker">LIVE CANVAS</span><span class="preview-title">Your cover</span></div><label class="size-picker">FORMAT <select id="format" aria-label="Export format"><option value="square">Square · 1080 × 1080</option><option value="portrait">Portrait · 1080 × 1350</option><option value="landscape">Landscape · 1920 × 1080</option></select></label></div>
-        <div class="canvas-stage"><canvas id="cover" width="1080" height="1080" aria-label="Your multi-frame cover. Select a frame to crop it."></canvas><div class="canvas-hint"><span>↖</span> Choose a frame to crop</div></div>
-        <footer class="preview-footer"><span><b class="footer-dot"></b> AUTOSAVED IN THIS BROWSER</span><span id="status" role="status">Ready to create</span><span>MADE OF YOUR MOMENTS <b>✳</b></span></footer>
+  <header class="topbar"><a class="wordmark" href="#studio">Afterglow <span>Cover Studio</span></a><div class="top-note"><i></i> OFFLINE CREATIVE TOOL</div></header>
+  <main id="studio" class="studio-shell">
+    <section class="stage-column" aria-label="Cover preview">
+      <div class="stage-heading"><div><p class="eyebrow">YOUR COVER, IN THE MAKING</p><h1>Build the <em>afterglow.</em></h1></div><span class="format-tag">SQUARE <b>1080 × 1080</b></span></div>
+      <div class="canvas-wrap"><canvas id="cover-canvas" width="1080" height="1080" aria-label="Nine-frame cover preview"></canvas><span class="canvas-stamp">AFTERGLOW / 001</span></div>
+      <p class="stage-hint"><span class="hint-dot"></span> Select any frame to edit its photograph</p>
+    </section>
+    <aside class="control-rail" aria-label="Cover controls">
+      <div class="rail-title"><span>STUDIO CONTROLS</span><span class="rail-index">01—05</span></div>
+      <section class="control-section"><div class="section-heading"><span class="section-number">01</span><h2>Choose a photograph</h2></div>
+        <div class="photo-options"><button class="photo-card active" data-photo="pier"><img src="samples/pier.jpg" alt="Pier at dusk"><span><b>Last light</b><small>PIER / DUSK</small></span></button><button class="photo-card" data-photo="boulevard"><img src="samples/boulevard.jpg" alt="Palm-lined boulevard"><span><b>City heat</b><small>BOULEVARD / DAY</small></span></button></div>
+        <label class="upload-button" for="photo-upload"><span>＋</span> Add your own photograph<input id="photo-upload" type="file" accept="image/*"></label>
+        <button id="fill-all" class="text-action">Fill all nine frames <span>↗</span></button>
       </section>
-    </div>
+      <section class="control-section"><div class="section-heading"><span class="section-number">02</span><h2>Frame &amp; crop</h2></div>
+        <div class="frame-picker" role="group" aria-label="Select frame"></div>
+        <label class="range-label" for="zoom-range"><span>FRAME ZOOM</span><output id="zoom-output">1.0×</output></label><input id="zoom-range" type="range" min="1" max="2.5" step="0.05" value="1">
+      </section>
+      <section class="control-section"><div class="section-heading"><span class="section-number">03</span><h2>Cover line</h2></div>
+        <label class="sr-only" for="caption-input">Cover caption</label><input id="caption-input" class="caption-input" type="text" maxlength="34" value="MIDNIGHT IN PARADISE" placeholder="Write a title…"><div class="ink-row"><span>INK</span><div class="ink-swatches" role="group" aria-label="Caption ink color"></div></div>
+      </section>
+      <section class="control-section"><div class="section-heading"><span class="section-number">04</span><h2>Colour story</h2></div><div class="grade-options" role="group" aria-label="Color grade"></div></section>
+      <section class="export-section"><div class="export-copy"><b>Ready for the marquee?</b><span>PNG · 1080 × 1080</span></div><button id="export-button" class="export-button">Export PNG <span>↓</span></button></section>
+      <p id="status-line" class="status-line" role="status" aria-live="polite">Your canvas is ready to roll.</p>
+    </aside>
   </main>
-  <script src="./src/cover.js"></script>
-  <script src="./src/shots.js"></script>
-  <script src="./src/main.js"></script>
 </body>
 </html>

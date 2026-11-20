@@ -1,17 +1,19 @@
-# Afterglow Cover Studio — make.fun bounty entry
+[![make.fun competition](https://make.fun/badge/gta6-cover-art-01.svg)](https://make.fun/bounty/gta6-cover-art-01)
+[![rank](https://make.fun/badge/gta6-cover-art-01/nocteaquilaeking/makefun-cover-art/rank.svg)](https://make.fun/bounty/gta6-cover-art-01)
+[![reward](https://make.fun/badge/gta6-cover-art-01/nocteaquilaeking/makefun-cover-art/reward.svg)](https://make.fun/bounty/gta6-cover-art-01)
 
-[![make.fun · gta6-cover-art-01](https://make.fun/badge/gta6-cover-art-01.svg)](https://make.fun/bounty/gta6-cover-art-01?utm_source=github&utm_medium=readme&utm_campaign=gta6-cover-art-01)
-[![rank](https://make.fun/badge/gta6-cover-art-01/nocteaquilaeking/makefun-cover-art/rank.svg)](https://make.fun/bounty/gta6-cover-art-01/leaderboard?utm_source=github&utm_medium=readme&utm_campaign=gta6-cover-art-01)
-[![reward](https://make.fun/badge/gta6-cover-art-01/nocteaquilaeking/makefun-cover-art/reward.svg)](https://make.fun/bounty/gta6-cover-art-01/leaderboard?utm_source=github&utm_medium=readme&utm_campaign=gta6-cover-art-01)
+# Afterglow Cover Studio
 
-Afterglow Cover Studio is a self-contained poster editor for assembling a nine-frame, Vice-inspired cover. Load the bundled pier or boulevard scene, add your own images, crop each panel, adjust the colour grade and title, and save a PNG. The Anton typeface is included locally.
+Afterglow is a small, offline cover-art studio inspired by the bright, cinematic color and bold lettering of open-world game covers. It runs as a static page, with no build step and no network dependency.
 
-## Run the studio
+## Run it
 
-Open `app/index.html` in a browser, or serve the `app/` folder with any static web server. Editing works without a build step or network connection.
+Use Node 24 to assemble the entry and dossier:
 
-## Capture and package
+```sh
+node main.ts
+```
 
-`shots.json` describes three scenes: a pier cover, the editor with the boulevard image, and a second boulevard cover. The capture harness in `app/src/shots.js` reads each query, loads its sample and caption, waits for fonts and painting, then sets `window.__shotReady`. The screenshot runner stores the named captures in `screenshots/`.
+The command checks for a JPG in `screenshots/`, copies `app/` and `screenshots/` to `MAKEFUN_OUTPUT_DIR` (or `/output`), and writes and validates `dossier.json` there.
 
-Run `MAKEFUN_BOT_DIR=. MAKEFUN_OUTPUT_DIR=/tmp/cover-out node main.ts` to copy the app and screenshots and produce a `dossier.json` file in the output directory.
+To use the studio directly, open `app/index.html` in a browser. The interface includes nine individually selectable image frames, two sample photographs, local photo upload, per-frame zoom, four caption colors, three color stories, and a square PNG export. Screenshot scenes can be selected with `?shot=cover` or `?shot=editor`, with optional `photo` and `caption` values.
